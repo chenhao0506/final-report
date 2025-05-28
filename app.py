@@ -13,21 +13,23 @@ st.markdown(
 
 st.title("研究動機")
 
-markdown = 
-"""
-這裡要打研究動機
-"""
+st.markdown(  
+    """
+    這裡要打研究動機
+    """
+)
 
 st.title("研究目的")
 
-markdown = 
-"""
-這裡要打研究目的
-"""
+st.markdown(  
+    """
+    這裡要打研究目的
+    """
+)
 
 st.title("研究方法")
-
-markdown = 
-"""
-這裡要打研究方法
-"""
+st.markdown( 
+    """
+    這裡要打研究方法
+    """
+)
