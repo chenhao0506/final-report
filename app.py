@@ -44,7 +44,7 @@ aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
 # 產生 Landsat 動態圖
 timelapse_gif = geemap.landsat_timelapse(
     aoi,
-    out_gif='kaohsiung.gif',
+    out_gif='temp/kaohsiung.gif',
     start_year=2014,
     end_year=2024,
     bands=['Red', 'Green', 'Blue'],
