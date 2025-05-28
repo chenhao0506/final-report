@@ -98,11 +98,11 @@ lst_vis = {
 st.title("高雄地區 NDVI 與地表溫度分析")
 st.markdown("時間範圍：2024 年 7 月")
 
-col1, col2 = st.columns(2)
-with col1:
-    st.metric("NDVI 最小值", f"{ndvi_min.getInfo():.3f}")
-with col2:
-    st.metric("NDVI 最大值", f"{ndvi_max.getInfo():.3f}")
+#col1, col2 = st.columns(2)
+#with col1:
+#    st.metric("NDVI 最小值", f"{ndvi_min.getInfo():.3f}")
+#with col2:
+#    st.metric("NDVI 最大值", f"{ndvi_max.getInfo():.3f}")
 
 # 顯示地圖
 Map = geemap.Map()
