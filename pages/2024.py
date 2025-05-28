@@ -2,7 +2,6 @@ import streamlit as st
 import geemap.foliumap as geemap
 import ee
 import json
-#import geemap
 from google.oauth2 import service_account
 
 # 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
@@ -78,21 +77,55 @@ lst = thermal.expression(
 ).rename('LST')
 
 # 地圖視覺化參數
-ndvi_vis = {
-    'min': -1,
-    'max': 1,
-    'palette': ['blue', 'white', 'green']
-}
 
-lst_vis = {
-    'min': 18.47,
-    'max': 42.86,
+vis_params_001 = {
+    'min': 10,
+    'max': 50,
     'palette': [
         '040274', '0502a3', '0502ce', '0602ff', '307ef3',
         '30c8e2', '3be285', '86e26f', 'b5e22e', 'ffd611',
         'ff8b13', 'ff0000', 'c21301', '911003'
     ]
 }
+
+
+
+#非監督式土地利用分析
+
+
+
+clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
+result002 = my_image.cluster(clusterer_XMeans)
+
+legend_dict = {
+    'zero': '#3A87AD',
+    'one': '#D94848',
+    'two': '#4CAF50',
+    'three': '#D9B382',
+    'four': '#F2D16B',
+    'five': '#A89F91',
+    'six': '#61C1E4',
+    'seven': '#7CB342',
+    'eight': '#8E7CC3'
+    }
+
+palette = list(legend_dict.values())
+
+
+vis_params_002 = {
+    'min': 0,
+    'max': len(palette) - 1,
+    'palette': palette
+}
+
+
+Map = geemap.Map()
+left_layer = geemap.ee_tile_layer(result001,vis_params_001 , 'hot island in Kaohsiung')
+right_layer = geemap.ee_tile_layer(result002,vis_params_002 , 'wekaXMeans classified land cover')
+
+Map = geemap.Map(center=[22.9, 120.6], zoom=9)
+Map.split_map(left_layer, right_layer)
+Map
 
 # Streamlit 介面
 st.title("高雄地區 NDVI 與地表溫度分析")
@@ -103,15 +136,4 @@ with col1:
     st.metric("NDVI 最小值", f"{ndvi_min.getInfo():.3f}")
 with col2:
     st.metric("NDVI 最大值", f"{ndvi_max.getInfo():.3f}")
-
-
-
-# 顯示地圖
-Map = geemap.Map()
-Map = geemap.Map(center=[22.9, 120.6], zoom=9)
-Map.addLayer(ndvi, ndvi_vis, "NDVI")
-Map.addLayer(lst, lst_vis, "LST")
-Map.addLayer(aoi, {"color": "black"}, "AOI")
-Map.to_streamlit(height=600)
-
 
