@@ -41,19 +41,27 @@ st.markdown(
 # 設定研究區域
 aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
 
-# 產生 Landsat 動態圖
-timelapse_gif = geemap.landsat_timelapse(
-    aoi,
-    out_gif='temp/kaohsiung.gif',
-    start_year=2014,
-    end_year=2024,
-    bands=['Red', 'Green', 'Blue'],
-    frames_per_second=5,
-    apply_fmask=True,
-)
+# 測試產生 GIF 是否成功
+try:
+    os.makedirs("temp", exist_ok=True)
 
-# 顯示 GIF
-st.image('kaohsiung.gif', caption='2014-2024 高雄地區 Landsat 動態影像', use_column_width=True)
+    timelapse_gif = geemap.landsat_timelapse(
+        aoi,
+        out_gif='temp/kaohsiung.gif',
+        start_year=2020,
+        end_year=2022,  # 先測兩年
+        bands=['Red', 'Green', 'Blue'],
+        frames_per_second=5,
+        apply_fmask=True,
+    )
+
+    if os.path.exists("temp/kaohsiung.gif"):
+        st.image("temp/kaohsiung.gif", caption="2020-2022 高雄地區 Landsat 動態影像", use_column_width=True)
+    else:
+        st.error("GIF 檔案未產生，請檢查 Earth Engine 資料是否足夠。")
+
+except Exception as e:
+    st.error(f"GIF 產生過程發生錯誤：{e}")
 
 st.title("研究目的")
 st.markdown(
