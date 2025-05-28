@@ -2,7 +2,7 @@ import streamlit as st
 import geemap.foliumap as geemap
 import ee
 import json
-import geemap
+#import geemap
 from google.oauth2 import service_account
 
 # 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
