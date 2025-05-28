@@ -2,9 +2,20 @@ import streamlit as st
 from datetime import date
 import ee
 import geemap
+import json
+import os
 
-# 初始化 Earth Engine
-ee.Initialize()
+# 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
+service_account_info = st.secrets["GEE_SERVICE_ACCOUNT"]
+
+# 使用 google-auth 進行 GEE 授權
+credentials = service_account.Credentials.from_service_account_info(
+    service_account_info,
+    scopes=["https://www.googleapis.com/auth/earthengine"]
+)
+
+# 初始化 GEE
+ee.Initialize(credentials)
 
 st.set_page_config(layout="wide", page_title="期末報告！")
 
