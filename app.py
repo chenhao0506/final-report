@@ -3,11 +3,11 @@ from datetime import date
 
 st.set_page_config(layout="wide", page_title="期末報告！")
 
-st.title("台灣海岸型城市之都市熱島現象解析")
+st.title("台灣海岸型城市之都市熱島現象分析")
 
 st.markdown(
     """
-   台灣海岸型城市之都市熱島現象解析
+   台灣海岸型城市之都市熱島現象分析
     """
 )
 
