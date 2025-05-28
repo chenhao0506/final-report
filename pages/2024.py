@@ -2,6 +2,7 @@ import streamlit as st
 import geemap.foliumap as geemap
 import ee
 import json
+import geemap
 
 # 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
 service_account_info = st.secrets["GEE_SERVICE_ACCOUNT"]
@@ -103,6 +104,7 @@ with col2:
     st.metric("NDVI 最大值", f"{ndvi_max.getInfo():.3f}")
 
 # 顯示地圖
+Map = geemap.Map()
 Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 Map.addLayer(ndvi, ndvi_vis, "NDVI")
 Map.addLayer(lst, lst_vis, "LST")
