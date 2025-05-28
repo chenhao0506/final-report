@@ -21,7 +21,7 @@ st.markdown(
 )
 
 my_Map = geemap.Map()
-aoi = ee.Geometry.Rectangle([121.1165, 24.8034, 121.3427, 25.1027])
+aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
 
 my_timelapse = geemap.landsat_timelapse(
     aoi,
