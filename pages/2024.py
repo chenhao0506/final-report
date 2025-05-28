@@ -111,7 +111,7 @@ Map = geemap.Map()
 Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 Map.addLayer(ndvi, ndvi_vis, "NDVI")
 Map.addLayer(lst, lst_vis, "LST")
-Map.addLayer(aoi, {"color": "red"}, "AOI")
+Map.addLayer(aoi, {"color": "black"}, "AOI")
 Map.to_streamlit(height=600)
 
 
