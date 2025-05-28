@@ -33,6 +33,7 @@ my_timelapse = geemap.landsat_timelapse(
     apply_fmask=True,
 )
 geemap.show_image(my_timelapse)
+my_Map.to_streamlit(width=800, height=600)
 
 st.title("研究目的")
 
