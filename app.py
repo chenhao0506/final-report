@@ -1,19 +1,5 @@
 import streamlit as st
 from datetime import date
-import ee
-import os
-
-# 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
-service_account_info = st.secrets["GEE_SERVICE_ACCOUNT"]
-
-# 使用 google-auth 進行 GEE 授權
-credentials = service_account.Credentials.from_service_account_info(
-    service_account_info,
-    scopes=["https://www.googleapis.com/auth/earthengine"]
-)
-
-# 初始化 GEE
-ee.Initialize(credentials)
 
 st.set_page_config(layout="wide", page_title="期末報告！")
 
@@ -21,8 +7,8 @@ st.title("台灣海岸型城市之都市熱島現象分析")
 
 st.markdown(
     """
-    本專案旨在探討台灣西南部海岸型城市（如高雄市）近年來都市熱島現象的空間與時間變化。
-    利用 Google Earth Engine 及 Landsat 8 衛星影像，結合地表溫度（LST）計算與時序分析，觀察城市發展對熱島效應的影響。
+    本報告目的是要探討台灣西南部海岸型城市（如高雄市）近年來都市熱島現象的空間與時間變化。
+    利用 Github 及衛星影像，結合地表溫度（LST）計算與土地利用分析，觀察城市發展對熱島效應的影響。
     """
 )
 
@@ -35,30 +21,7 @@ st.markdown(
     """
 )
 
-# 設定研究區域
-aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
-
-# 測試產生 GIF 是否成功
-try:
-    os.makedirs("temp", exist_ok=True)
-
-    timelapse_gif = geemap.landsat_timelapse(
-        aoi,
-        out_gif='temp/kaohsiung.gif',
-        start_year=2020,
-        end_year=2022,  # 先測兩年
-        bands=['Red', 'Green', 'Blue'],
-        frames_per_second=5,
-        apply_fmask=True,
-    )
-
-    if os.path.exists("temp/kaohsiung.gif"):
-        st.image("temp/kaohsiung.gif", caption="2020-2022 高雄地區 Landsat 動態影像", use_column_width=True)
-    else:
-        st.error("GIF 檔案未產生，請檢查 Earth Engine 資料是否足夠。")
-
-except Exception as e:
-    st.error(f"GIF 產生過程發生錯誤：{e}")
+#這裡要放timelapse
 
 st.title("研究目的")
 st.markdown(
