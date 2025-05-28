@@ -92,10 +92,21 @@ vis_params_001 = {
 
 #非監督式土地利用分析
 
+# 選擇分類用波段
+classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
 
+# 抽樣產生訓練資料
+training001 = classified_bands.sample(
+    region=aoi,
+    scale=30,
+    numPixels=5000,
+    seed=0,
+    geometries=True
+)
 
+# 訓練分類器並分類
 clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
-result002 = my_image.cluster(clusterer_XMeans)
+result002 = classified_bands.cluster(clusterer_XMeans)
 
 legend_dict = {
     'zero': '#3A87AD',
@@ -119,14 +130,12 @@ vis_params_002 = {
 }
 
 
-Map = geemap.Map()
+Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 left_layer = geemap.ee_tile_layer(lst,vis_params_001 , 'hot island in Kaohsiung')
 right_layer = geemap.ee_tile_layer(result002,vis_params_002 , 'wekaXMeans classified land cover')
-
-Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 Map.split_map(left_layer, right_layer)
-Map
 
 # Streamlit 介面
 st.title("高雄地區 NDVI 與地表溫度分析")
 st.markdown("時間範圍：2024 年 7 月")
+Map.to_streamlit(width=800, height=600)
