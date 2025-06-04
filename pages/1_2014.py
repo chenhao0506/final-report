@@ -149,8 +149,6 @@ if st.session_state.lst_image is None or st.session_state.classified_image is No
         'palette': list(st.session_state.classified_legend_dict.values())
     }
 
-    st.success("GEE 影像處理完成，結果已存入 session_state！")
-
 # --- Streamlit 介面與地圖顯示 ---
 st.title("高雄地區 NDVI 與地表溫度分析")
 st.markdown("時間範圍：2014 年 7 月")
@@ -176,5 +174,3 @@ if st.session_state.lst_image is not None and st.session_state.classified_image 
     # Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict)
 
     Map.to_streamlit(width=800, height=600)
-else:
-    st.warning("影像正在處理中，請稍候...") # Display a message if images are still being processed.
