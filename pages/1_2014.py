@@ -116,10 +116,10 @@ clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
 result002 = classified_bands.cluster(clusterer_XMeans)
 
 # 將 result002 存入 session_state
-    st.session_state.classified_image = calculated_result002
+st.session_state.classified_image = calculated_result002
 
     # 分類結果的視覺化參數和圖例
-    st.session_state.classified_legend_dict = {
+st.session_state.classified_legend_dict = {
         'zero': '#3A87AD',
         'one': '#D94848',
         'two': '#4CAF50',
@@ -130,13 +130,14 @@ result002 = classified_bands.cluster(clusterer_XMeans)
         'seven': '#7CB342',
         'eight': '#8E7CC3'
     }
-    st.session_state.classified_vis_params = {
+
+st.session_state.classified_vis_params = {
         'min': 0,
         'max': len(st.session_state.classified_legend_dict.values()) - 1,
         'palette': list(st.session_state.classified_legend_dict.values())
     }
 
-    st.success("GEE 影像處理完成，結果已存入 session_state！")
+st.success("GEE 影像處理完成，結果已存入 session_state！")
 
 # --- Streamlit 介面與地圖顯示 ---
 st.title("高雄地區 NDVI 與地表溫度分析")
