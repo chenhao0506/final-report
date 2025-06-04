@@ -110,16 +110,6 @@ def get_classified(image):
     result = classified_bands.cluster(clusterer)
     return result
 
-# --- GEE 數據處理和計算 (僅在結果不在 session_state 時執行) ---
-# Check if all required GEE images are already in session_state.
-# If not, perform the computations and store them.
-if (st.session_state.lst_2014_image is None or
-    st.session_state.class_2014_image is None or
-    st.session_state.lst_2024_image is None or
-    st.session_state.class_2024_image is None):
-
-    st.info("首次載入或重新計算中，請稍候...") # Inform the user that computations are running.
-
     # 處理 2014 資料
     image_2014 = get_processed_image(['2014-07-01', '2014-07-31'])
     st.session_state.lst_2014_image = calculate_lst(image_2014)
@@ -172,11 +162,3 @@ if (st.session_state.lst_2014_image is not None and
 
     st.subheader("土地利用分類比較圖")
     Map2.to_streamlit(width=800, height=600)
-
-    # Optionally add legend to one of the maps if geemap supports it directly from a dict
-    # Example for Map2, assuming geemap.Map has an add_legend method:
-    # Map2.add_legend(title="土地覆蓋分類", legend_dict=legend_dict)
-
-else:
-    st.warning("影像正在處理中，請稍候...") # Display a message if images are still being processed.
-
