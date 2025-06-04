@@ -150,7 +150,7 @@ if st.session_state.lst_image is None or st.session_state.classified_image is No
     }
 
 # --- Streamlit 介面與地圖顯示 ---
-st.title("高雄地區 NDVI 與地表溫度分析")
+st.title("高雄地區地表溫度與土地利用分析")
 st.markdown("時間範圍：2014 年 7 月")
 
 # 確保 session_state 中的影像已經存在才能進行地圖顯示
