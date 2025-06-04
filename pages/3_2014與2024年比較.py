@@ -68,8 +68,8 @@ def get_processed_image(date_range):
 
 def calculate_lst(image):
     ndvi = image.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
-    ndvi_min = ee.Number(ndvi.reduceRegion(ee.Reducer.min(), aoi, 30).values().get(0))
-    ndvi_max = ee.Number(ndvi.reduceRegion(ee.Reducer.max(), aoi, 30).values().get(0))
+    ndvi_min = ee.Number(ndvi.reduceRegion(ee.Reducer.min(), aoi, 30,maxPixels = 1e10).values().get(0))
+    ndvi_max = ee.Number(ndvi.reduceRegion(ee.Reducer.max(), aoi, 30,maxPixels = 1e10).values().get(0))
     fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)).pow(2).rename("FV")
     em = fv.multiply(0.004).add(0.986).rename("EM")
     thermal = image.select('ST_B10').rename('thermal')
