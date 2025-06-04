@@ -13,113 +13,125 @@ credentials = service_account.Credentials.from_service_account_info(
     scopes=["https://www.googleapis.com/auth/earthengine"]
 )
 
-# 初始化 GEE
-ee.Initialize(credentials)
+# 初始化 GEE (確保只初始化一次)
+# This ensures that Earth Engine is initialized only once per Streamlit app run.
+if not ee.data._initialized:
+    ee.Initialize(credentials)
 
 # 初始化 Session State
-st.session_state.lst_image = None
-st.session_state.lst_vis_params = None
-st.session_state.classified_image = None
-st.session_state.classified_vis_params = None
-st.session_state.classified_legend_dict = None
+# Initialize session state variables. This ensures they exist even on first run.
+if 'lst_image' not in st.session_state:
+    st.session_state.lst_image = None
+if 'lst_vis_params' not in st.session_state:
+    st.session_state.lst_vis_params = None
+if 'classified_image' not in st.session_state:
+    st.session_state.classified_image = None
+if 'classified_vis_params' not in st.session_state:
+    st.session_state.classified_vis_params = None
+if 'classified_legend_dict' not in st.session_state:
+    st.session_state.classified_legend_dict = None
 
-# 設定 AOI 與時間範圍
-aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
-startDate = '2014-07-01'
-endDate = '2014-07-31'
+# --- GEE 數據處理和計算 (僅在結果不在 session_state 時執行) ---
+# Perform GEE computations only if the results are not already in session_state.
+# This prevents re-running expensive computations on every Streamlit rerun.
+if st.session_state.lst_image is None or st.session_state.classified_image is None:
+    st.info("首次載入或重新計算中，請稍候...") # Inform the user that computations are running.
 
-# 資料處理函數
-def applyScaleFactors(image):
-    opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
-    thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
-    return image.addBands(opticalBands, overwrite=True).addBands(thermalBands, overwrite=True)
+    # 設定 AOI 與時間範圍
+    aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
+    startDate = '2014-07-01'
+    endDate = '2014-07-31'
 
-def cloudMask(image):
-    cloud_shadow_bitmask = (1 << 3)
-    cloud_bitmask = (1 << 5)
-    qa = image.select('QA_PIXEL')
-    mask = qa.bitwiseAnd(cloud_shadow_bitmask).eq(0).And(
-           qa.bitwiseAnd(cloud_bitmask).eq(0))
-    return image.updateMask(mask)
+    # 資料處理函數
+    def applyScaleFactors(image):
+        opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
+        thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
+        return image.addBands(opticalBands, overwrite=True).addBands(thermalBands, overwrite=True)
 
-# 建立影像集合
-collection = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
-                .filterBounds(aoi)
-                .filterDate(startDate, endDate))
+    def cloudMask(image):
+        cloud_shadow_bitmask = (1 << 3)
+        cloud_bitmask = (1 << 5)
+        qa = image.select('QA_PIXEL')
+        mask = qa.bitwiseAnd(cloud_shadow_bitmask).eq(0).And(
+                    qa.bitwiseAnd(cloud_bitmask).eq(0))
+        return image.updateMask(mask)
 
-image = (collection
-         .map(applyScaleFactors)
-         .map(cloudMask)
-         .median()
-         .clip(aoi))
+    # 建立影像集合
+    collection = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+                    .filterBounds(aoi)
+                    .filterDate(startDate, endDate))
 
-# 計算 NDVI
-ndvi = image.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
+    image = (collection
+            .map(applyScaleFactors)
+            .map(cloudMask)
+            .median()
+            .clip(aoi))
 
-ndvi_min = ee.Number(ndvi.reduceRegion(
-    reducer=ee.Reducer.min(),
-    geometry=aoi,
-    scale=30,
-    maxPixels=1e9
-).values().get(0))
+    # 計算 NDVI
+    ndvi = image.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
 
-ndvi_max = ee.Number(ndvi.reduceRegion(
-    reducer=ee.Reducer.max(),
-    geometry=aoi,
-    scale=30,
-    maxPixels=1e9
-).values().get(0))
+    # Ensure maxPixels is large enough or use bestEffort=True for reduceRegion
+    ndvi_min = ee.Number(ndvi.reduceRegion(
+        reducer=ee.Reducer.min(),
+        geometry=aoi,
+        scale=30,
+        maxPixels=1e9 # Set a sufficiently large value
+    ).values().get(0))
 
-fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)) \
-    .pow(2).rename("FV")
-em = fv.multiply(0.004).add(0.986).rename("EM")
-thermal = image.select('ST_B10').rename('thermal')
+    ndvi_max = ee.Number(ndvi.reduceRegion(
+        reducer=ee.Reducer.max(),
+        geometry=aoi,
+        scale=30,
+        maxPixels=1e9 # Set a sufficiently large value
+    ).values().get(0))
 
-lst = thermal.expression(
-    '(TB / (1 + (0.00115 * (TB / 1.438)) * log(em))) - 273.15',
-    {
-        'TB': thermal.select('thermal'),
-        'em': em
+    fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)) \
+        .pow(2).rename("FV")
+    em = fv.multiply(0.004).add(0.986).rename("EM")
+    thermal = image.select('ST_B10').rename('thermal')
+
+    # Calculate LST
+    calculated_lst = thermal.expression( # Renamed to calculated_lst for clarity
+        '(TB / (1 + (0.00115 * (TB / 1.438)) * log(em))) - 273.15',
+        {
+            'TB': thermal.select('thermal'),
+            'em': em
+        }
+    ).rename('LST')
+
+    # Store LST and its visualization parameters in session_state
+    st.session_state.lst_image = calculated_lst
+    st.session_state.lst_vis_params = {
+        'min': 10,
+        'max': 50,
+        'palette': [
+            '040274', '0502a3', '0502ce', '0602ff', '307ef3',
+            '30c8e2', '3be285', '86e26f', 'b5e22e', 'ffd611',
+            'ff8b13', 'ff0000', 'c21301', '911003'
+        ]
     }
-).rename('LST')
 
-# 地圖視覺化參數
+    # 非監督式土地利用分析
+    # Select bands for classification
+    classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
 
-vis_params_001 = {
-    'min': 10,
-    'max': 50,
-    'palette': [
-        '040274', '0502a3', '0502ce', '0602ff', '307ef3',
-        '30c8e2', '3be285', '86e26f', 'b5e22e', 'ffd611',
-        'ff8b13', 'ff0000', 'c21301', '911003'
-    ]
-}
+    # Sample training data
+    training001 = classified_bands.sample(
+        region=aoi,
+        scale=30,
+        numPixels=5000,
+        seed=0,
+        geometries=True
+    )
 
+    # Train classifier and classify
+    clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
+    calculated_result002 = classified_bands.cluster(clusterer_XMeans) # Renamed to calculated_result002
 
+    # Store classified image and its visualization parameters/legend in session_state
+    st.session_state.classified_image = calculated_result002
 
-#非監督式土地利用分析
-
-# 選擇分類用波段
-classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
-
-# 抽樣產生訓練資料
-training001 = classified_bands.sample(
-    region=aoi,
-    scale=30,
-    numPixels=5000,
-    seed=0,
-    geometries=True
-)
-
-# 訓練分類器並分類
-clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
-result002 = classified_bands.cluster(clusterer_XMeans)
-
-# 將 result002 存入 session_state
-st.session_state.classified_image = calculated_result002
-
-    # 分類結果的視覺化參數和圖例
-st.session_state.classified_legend_dict = {
+    st.session_state.classified_legend_dict = {
         'zero': '#3A87AD',
         'one': '#D94848',
         'two': '#4CAF50',
@@ -131,19 +143,20 @@ st.session_state.classified_legend_dict = {
         'eight': '#8E7CC3'
     }
 
-st.session_state.classified_vis_params = {
+    st.session_state.classified_vis_params = {
         'min': 0,
         'max': len(st.session_state.classified_legend_dict.values()) - 1,
         'palette': list(st.session_state.classified_legend_dict.values())
     }
 
-st.success("GEE 影像處理完成，結果已存入 session_state！")
+    st.success("GEE 影像處理完成，結果已存入 session_state！")
 
 # --- Streamlit 介面與地圖顯示 ---
 st.title("高雄地區 NDVI 與地表溫度分析")
 st.markdown("時間範圍：2014 年 7 月")
 
 # 確保 session_state 中的影像已經存在才能進行地圖顯示
+# Only display the map if both LST and classified images are available in session_state.
 if st.session_state.lst_image is not None and st.session_state.classified_image is not None:
     Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 
@@ -159,6 +172,9 @@ if st.session_state.lst_image is not None and st.session_state.classified_image 
     right_layer = geemap.ee_tile_layer(result002, vis_params_002, 'wekaXMeans classified land cover')
     Map.split_map(left_layer, right_layer)
 
+    # Optionally add legend if geemap supports it directly from a dict
+    # Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict)
+
     Map.to_streamlit(width=800, height=600)
 else:
-    st.warning("影像正在處理中，請稍候...")
+    st.warning("影像正在處理中，請稍候...") # Display a message if images are still being processed.
