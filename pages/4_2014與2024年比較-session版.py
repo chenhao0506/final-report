@@ -121,12 +121,6 @@ def get_classified(image):
     st.session_state.lst_2024_image = calculate_lst(image_2024)
     st.session_state.class_2024_image = get_classified(image_2024)
 
-def test():
-    L = [i for i in range(100)]  # 生成一個列表
-    
-# 使用 timeit.timeit 測量 test() 的執行時間
-execution_time = timeit.timeit("test()", setup="from __main__ import test", number=100000)
-
 # 確保 session_state 中的影像已經存在才能進行地圖顯示
 # Only display the maps if all required images are available in session_state.
 if (st.session_state.lst_2014_image is not None and
@@ -163,6 +157,12 @@ if (st.session_state.lst_2014_image is not None and
 
     st.subheader("土地利用分類比較圖")
     Map2.to_streamlit(width=800, height=600)
+
+def test():
+    L = [i for i in range(100)]  # 生成一個列表
+    
+# 使用 timeit.timeit 測量 test() 的執行時間
+execution_time = timeit.timeit("test()", setup="from __main__ import test", number=100000)
 
 # --- Streamlit 介面與地圖顯示 ---
 st.title("10年間高雄地區綜整分析比較-session state")
