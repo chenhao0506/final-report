@@ -2,6 +2,7 @@ import streamlit as st
 import geemap.foliumap as geemap
 import ee
 import json
+import timeit
 from google.oauth2 import service_account
 
 # GEE 認證
