@@ -167,5 +167,5 @@ if (st.session_state.lst_2014_image is not None and
 # --- Streamlit 介面與地圖顯示 ---
 st.title("10年間高雄地區綜整分析比較-session state")
 st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdown to reflect both years
-st.markdown("分析時間："{execution_time} "秒")
+st.markdown(f"分析時間："{execution_time} "秒")
 
