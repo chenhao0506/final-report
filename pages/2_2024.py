@@ -147,7 +147,7 @@ if 'classified_legend_dict' not in st.session_state:
 
 # --- Streamlit 介面與地圖顯示 ---
 # Streamlit interface and map display
-st.title("高雄地區地表溫度分析與土地利用")
+st.title("高雄地區地表溫度分析與土地利用分析")
 st.markdown("時間範圍：2024 年 7 月") # Updated date in markdown
 
 # 確保 session_state 中的影像已經存在才能進行地圖顯示
