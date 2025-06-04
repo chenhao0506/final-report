@@ -158,7 +158,7 @@ if (st.session_state.lst_2014_image is not None and
     st.subheader("土地利用分類比較圖")
     Map2.to_streamlit(width=800, height=600)
 
-def test():
+test():
     L = [i for i in range(100)]  # 生成一個列表
     
 # 使用 timeit.timeit 測量 test() 的執行時間
