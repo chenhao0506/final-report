@@ -26,10 +26,9 @@ def applyScaleFactors(image):
     return image.addBands(optical, overwrite=True).addBands(thermal, overwrite=True)
 
 def cloudMask(image):
-    cloud_shadow = (1 << 3)
     cloud = (1 << 5)
     qa = image.select('QA_PIXEL')
-    mask = qa.bitwiseAnd(cloud_shadow).eq(0).And(qa.bitwiseAnd(cloud).eq(0))
+    mask = qa.bitwiseAnd(cloud).eq(0)
     return image.updateMask(mask)
 
 def get_LST_and_NDVI(start, end):
@@ -53,7 +52,7 @@ def get_LST_and_NDVI(start, end):
         {'TB': thermal, 'em': em}
     ).rename('LST')
 
-    return img, ndvi, lst
+    return img, ndvi, lst.unmask(0)
 
 def classify_unsupervised(image):
     bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
