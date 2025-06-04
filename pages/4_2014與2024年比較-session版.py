@@ -126,8 +126,6 @@ def test():
     
 # 使用 timeit.timeit 測量 test() 的執行時間
 execution_time = timeit.timeit("test()", setup="from __main__ import test", number=100000)
- https://vocus.cc/article/66e46596fd8978000180f5ac
-
 
 # 確保 session_state 中的影像已經存在才能進行地圖顯示
 # Only display the maps if all required images are available in session_state.
