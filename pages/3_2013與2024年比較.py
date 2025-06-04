@@ -18,19 +18,19 @@ dates = {
     "2024": ("2024-07-01", "2024-07-31")
 }
 
-# 影像前處理函數
+# 前處理函數
 def applyScaleFactors(image):
     optical = image.select('SR_B.').multiply(0.0000275).add(-0.2)
     thermal = image.select('ST_B.*').multiply(0.00341802).add(149.0)
     return image.addBands(optical, overwrite=True).addBands(thermal, overwrite=True)
 
 def cloudMask(image):
-    cloud = (1 << 5)
+    cloud_bit = (1 << 5)
     qa = image.select('QA_PIXEL')
-    mask = qa.bitwiseAnd(cloud).eq(0)
+    mask = qa.bitwiseAnd(cloud_bit).eq(0)
     return image.updateMask(mask)
 
-# 地表溫度取得函數
+# 計算 LST（使用 GEE 本身的 log 函數）
 def get_LST(start, end):
     col = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
            .filterBounds(aoi)
@@ -43,13 +43,15 @@ def get_LST(start, end):
 
     ndvi_min = ee.Number(ndvi.reduceRegion(ee.Reducer.min(), aoi, 30).values().get(0))
     ndvi_max = ee.Number(ndvi.reduceRegion(ee.Reducer.max(), aoi, 30).values().get(0))
+
     fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)).pow(2).rename("FV")
     em = fv.multiply(0.004).add(0.986).rename("EM")
     thermal = img.select('ST_B10')
 
+    # GEE 的 expression 支援內建 log()
     lst = thermal.expression(
-        '(TB / (1 + (0.00115 * (TB / 1.438)) * log(em))) - 273.15',
-        {'TB': thermal, 'em': em}
+        '(TB / (1 + (0.00115 * (TB / 1.438)) * log(EM))) - 273.15',
+        {'TB': thermal, 'EM': em}
     ).rename('LST')
 
     lst = lst.updateMask(lst.gt(0).And(lst.lt(60))).unmask(0)
@@ -63,7 +65,7 @@ def classify_unsupervised(image):
     result = bands.cluster(clusterer)
     return result
 
-# 可視化參數
+# 視覺化參數
 lst_vis = {
     'min': 10,
     'max': 50,
@@ -82,17 +84,17 @@ landuse_vis = {
     'palette': landuse_palette
 }
 
-# 載入資料
+# 資料準備
 img_2014, lst_2014 = get_LST(*dates["2014"])
 img_2024, lst_2024 = get_LST(*dates["2024"])
 
 lu_2014 = classify_unsupervised(img_2014)
 lu_2024 = classify_unsupervised(img_2024)
 
-# Streamlit UI
+# Streamlit 介面
 st.title("高雄地區遙測分析系統")
 
-# 第一張圖：地表溫度分析
+# 地表溫度圖（上下排列第一張）
 st.subheader("地表溫度比較 (LST)")
 st.markdown("時間範圍：**2014 年 7 月** vs **2024 年 7 月**")
 map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
@@ -102,7 +104,7 @@ map1.split_map(
 )
 map1.to_streamlit(width=800, height=600)
 
-# 第二張圖：土地利用分析
+# 土地利用圖（上下排列第二張）
 st.subheader("非監督式土地利用分類")
 st.markdown("時間範圍：**2014 年 7 月** vs **2024 年 7 月**")
 map2 = geemap.Map(center=[22.9, 120.6], zoom=9)
