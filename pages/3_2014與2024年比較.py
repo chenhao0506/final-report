@@ -1,9 +1,10 @@
 import streamlit as st
 import geemap.foliumap as geemap
 import ee
+import json
 from google.oauth2 import service_account
 
-# 初始化 GEE
+# GEE 認證
 service_account_info = st.secrets["GEE_SERVICE_ACCOUNT"]
 credentials = service_account.Credentials.from_service_account_info(
     service_account_info,
@@ -11,71 +12,109 @@ credentials = service_account.Credentials.from_service_account_info(
 )
 ee.Initialize(credentials)
 
-# 區域與時間設定
+# 共用參數
 aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
-dates = {
-    "2014": ("2014-07-01", "2014-07-31"),
-    "2024": ("2024-07-01", "2024-07-31")
-}
-
-# 工具函數
-def applyScaleFactors(image):
-    optical = image.select('SR_B.').multiply(0.0000275).add(-0.2)
-    thermal = image.select('ST_B.*').multiply(0.00341802).add(149.0)
-    return image.addBands(optical, overwrite=True).addBands(thermal, overwrite=True)
-
-def cloudMask(image):
-    cloud = (1 << 5)
-    qa = image.select('QA_PIXEL')
-    mask = qa.bitwiseAnd(cloud).eq(0)
-    return image.updateMask(mask)
-
-def get_LST(start, end):
-    collection = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
-                  .filterBounds(aoi)
-                  .filterDate(start, end)
-                  .map(applyScaleFactors)
-                  .map(cloudMask))
-
-    img = collection.median().clip(aoi)
-    thermal = img.select('ST_B10')
-
-    # 採用固定 emissivity（避免 NDVI 導致錯誤），保守估計都市地區
-    emissivity = ee.Image.constant(0.97).clip(aoi)
-
-    lst = thermal.expression(
-        '(TB / (1 + (0.00115 * (TB / 1.438)) * log(e))) - 273.15',
-        {'TB': thermal, 'e': emissivity}
-    ).rename("LST")
-
-    lst = lst.updateMask(lst.gt(10).And(lst.lt(50)))  # 合理範圍過濾
-    return lst
-
-# LST 色彩視覺參數
-lst_vis = {
+vis_params_temp = {
     'min': 10,
     'max': 50,
-    'palette': ['040274', '0502a3', '0502ce', '0602ff', '307ef3',
-                '30c8e2', '3be285', '86e26f', 'b5e22e', 'ffd611',
-                'ff8b13', 'ff0000', 'c21301', '911003']
+    'palette': [
+        '040274', '0502a3', '0502ce', '0602ff', '307ef3',
+        '30c8e2', '3be285', '86e26f', 'b5e22e', 'ffd611',
+        'ff8b13', 'ff0000', 'c21301', '911003'
+    ]
+}
+legend_dict = {
+    'zero': '#3A87AD',
+    'one': '#D94848',
+    'two': '#4CAF50',
+    'three': '#D9B382',
+    'four': '#F2D16B',
+    'five': '#A89F91',
+    'six': '#61C1E4',
+    'seven': '#7CB342',
+    'eight': '#8E7CC3'
+}
+palette = list(legend_dict.values())
+vis_params_class = {
+    'min': 0,
+    'max': len(palette) - 1,
+    'palette': palette
 }
 
-# 產生 2014 與 2024 的地表溫度
-lst_2014 = get_LST(*dates["2014"])
-lst_2024 = get_LST(*dates["2024"])
+# 共用函數
+def applyScaleFactors(image):
+    opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
+    thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
+    return image.addBands(opticalBands, overwrite=True).addBands(thermalBands, overwrite=True)
 
-# Streamlit UI
-st.title("高雄地區地表溫度比較（2014 vs 2024）")
-st.markdown("下方展示 Landsat 衛星於 2014 年與 2024 年 7 月的地表溫度圖層，使用固定發射率 0.97 計算")
+def cloudMask(image):
+    cloud_shadow_bitmask = (1 << 3)
+    cloud_bitmask = (1 << 5)
+    qa = image.select('QA_PIXEL')
+    mask = qa.bitwiseAnd(cloud_shadow_bitmask).eq(0).And(
+           qa.bitwiseAnd(cloud_bitmask).eq(0))
+    return image.updateMask(mask)
 
-# 地圖 1：2014 年
-st.subheader("2014 年 7 月地表溫度")
-m1 = geemap.Map(center=[22.9, 120.6], zoom=9)
-m1.addLayer(lst_2014, lst_vis, "LST 2014")
-m1.to_streamlit(width=800, height=500)
+def get_processed_image(date_range):
+    collection = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+                    .filterBounds(aoi)
+                    .filterDate(date_range[0], date_range[1]))
+    image = (collection
+             .map(applyScaleFactors)
+             .map(cloudMask)
+             .median()
+             .clip(aoi))
+    return image
 
-# 地圖 2：2024 年
-st.subheader("2024 年 7 月地表溫度")
-m2 = geemap.Map(center=[22.9, 120.6], zoom=9)
-m2.addLayer(lst_2024, lst_vis, "LST 2024")
-m2.to_streamlit(width=800, height=500)
+def calculate_lst(image):
+    ndvi = image.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
+    ndvi_min = ee.Number(ndvi.reduceRegion(ee.Reducer.min(), aoi, 30).values().get(0))
+    ndvi_max = ee.Number(ndvi.reduceRegion(ee.Reducer.max(), aoi, 30).values().get(0))
+    fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)).pow(2).rename("FV")
+    em = fv.multiply(0.004).add(0.986).rename("EM")
+    thermal = image.select('ST_B10').rename('thermal')
+    lst = thermal.expression(
+        '(TB / (1 + (0.00115 * (TB / 1.438)) * log(em))) - 273.15',
+        {'TB': thermal.select('thermal'), 'em': em}
+    ).rename('LST')
+    return lst
+
+def get_classified(image):
+    classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
+    training = classified_bands.sample(region=aoi, scale=30, numPixels=5000, seed=0, geometries=True)
+    clusterer = ee.Clusterer.wekaXMeans().train(training)
+    result = classified_bands.cluster(clusterer)
+    return result
+
+# 處理 2014 資料
+image_2014 = get_processed_image(['2014-07-01', '2014-07-31'])
+lst_2014 = calculate_lst(image_2014)
+class_2014 = get_classified(image_2014)
+
+# 處理 2024 資料
+image_2024 = get_processed_image(['2024-07-01', '2024-07-31'])
+lst_2024 = calculate_lst(image_2024)
+class_2024 = get_classified(image_2024)
+
+# 第一張圖：地表溫度比較
+Map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
+Map1.split_map(
+    geemap.ee_tile_layer(lst_2014, vis_params_temp, "2014 LST"),
+    geemap.ee_tile_layer(lst_2024, vis_params_temp, "2024 LST")
+)
+
+# 第二張圖：土地利用分類比較
+Map2 = geemap.Map(center=[22.9, 120.6], zoom=9)
+Map2.split_map(
+    geemap.ee_tile_layer(class_2014, vis_params_class, "2014 Land Cover"),
+    geemap.ee_tile_layer(class_2024, vis_params_class, "2024 Land Cover")
+)
+
+# Streamlit 介面
+st.title("2014 與 2024 年高雄地區分析比較")
+
+st.subheader("地表溫度比較圖")
+Map1.to_streamlit(width=800, height=600)
+
+st.subheader("土地利用分類比較圖")
+Map2.to_streamlit(width=800, height=600)
