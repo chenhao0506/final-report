@@ -135,3 +135,44 @@ Map.split_map(left_layer, right_layer)
 st.title("高雄地區 NDVI 與地表溫度分析")
 st.markdown("時間範圍比較：**2014 年 7 月** vs **2024 年 7 月**")
 Map.to_streamlit(width=800, height=600)
+
+
+
+#非監督式土地利用分析
+
+# 選擇分類用波段
+classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
+
+# 抽樣產生訓練資料
+training001 = classified_bands.sample(
+    region=aoi,
+    scale=30,
+    numPixels=5000,
+    seed=0,
+    geometries=True
+)
+
+# 訓練分類器並分類
+clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
+result002 = classified_bands.cluster(clusterer_XMeans)
+
+legend_dict = {
+    'zero': '#3A87AD',
+    'one': '#D94848',
+    'two': '#4CAF50',
+    'three': '#D9B382',
+    'four': '#F2D16B',
+    'five': '#A89F91',
+    'six': '#61C1E4',
+    'seven': '#7CB342',
+    'eight': '#8E7CC3'
+    }
+
+palette = list(legend_dict.values())
+
+
+vis_params_002 = {
+    'min': 0,
+    'max': len(palette) - 1,
+    'palette': palette
+}
