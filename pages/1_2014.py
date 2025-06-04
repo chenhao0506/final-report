@@ -16,6 +16,13 @@ credentials = service_account.Credentials.from_service_account_info(
 # 初始化 GEE
 ee.Initialize(credentials)
 
+# 初始化 Session State
+st.session_state.lst_image = None
+st.session_state.lst_vis_params = None
+st.session_state.classified_image = None
+st.session_state.classified_vis_params = None
+st.session_state.classified_legend_dict = None
+
 # 設定 AOI 與時間範圍
 aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
 startDate = '2014-07-01'
@@ -108,34 +115,49 @@ training001 = classified_bands.sample(
 clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
 result002 = classified_bands.cluster(clusterer_XMeans)
 
-legend_dict = {
-    'zero': '#3A87AD',
-    'one': '#D94848',
-    'two': '#4CAF50',
-    'three': '#D9B382',
-    'four': '#F2D16B',
-    'five': '#A89F91',
-    'six': '#61C1E4',
-    'seven': '#7CB342',
-    'eight': '#8E7CC3'
+# 將 result002 存入 session_state
+    st.session_state.classified_image = calculated_result002
+
+    # 分類結果的視覺化參數和圖例
+    st.session_state.classified_legend_dict = {
+        'zero': '#3A87AD',
+        'one': '#D94848',
+        'two': '#4CAF50',
+        'three': '#D9B382',
+        'four': '#F2D16B',
+        'five': '#A89F91',
+        'six': '#61C1E4',
+        'seven': '#7CB342',
+        'eight': '#8E7CC3'
+    }
+    st.session_state.classified_vis_params = {
+        'min': 0,
+        'max': len(st.session_state.classified_legend_dict.values()) - 1,
+        'palette': list(st.session_state.classified_legend_dict.values())
     }
 
-palette = list(legend_dict.values())
+    st.success("GEE 影像處理完成，結果已存入 session_state！")
 
-
-vis_params_002 = {
-    'min': 0,
-    'max': len(palette) - 1,
-    'palette': palette
-}
-
-
-Map = geemap.Map(center=[22.9, 120.6], zoom=9)
-left_layer = geemap.ee_tile_layer(lst,vis_params_001 , 'hot island in Kaohsiung')
-right_layer = geemap.ee_tile_layer(result002,vis_params_002 , 'wekaXMeans classified land cover')
-Map.split_map(left_layer, right_layer)
-
-# Streamlit 介面
+# --- Streamlit 介面與地圖顯示 ---
 st.title("高雄地區 NDVI 與地表溫度分析")
 st.markdown("時間範圍：2014 年 7 月")
-Map.to_streamlit(width=800, height=600)
+
+# 確保 session_state 中的影像已經存在才能進行地圖顯示
+if st.session_state.lst_image is not None and st.session_state.classified_image is not None:
+    Map = geemap.Map(center=[22.9, 120.6], zoom=9)
+
+    # 從 session_state 取出影像和可視化參數
+    lst = st.session_state.lst_image
+    vis_params_001 = st.session_state.lst_vis_params
+
+    result002 = st.session_state.classified_image
+    vis_params_002 = st.session_state.classified_vis_params
+    legend_dict = st.session_state.classified_legend_dict
+
+    left_layer = geemap.ee_tile_layer(lst, vis_params_001, 'hot island in Kaohsiung')
+    right_layer = geemap.ee_tile_layer(result002, vis_params_002, 'wekaXMeans classified land cover')
+    Map.split_map(left_layer, right_layer)
+
+    Map.to_streamlit(width=800, height=600)
+else:
+    st.warning("影像正在處理中，請稍候...")
