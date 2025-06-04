@@ -144,24 +144,24 @@ st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdow
 st.markdown(f"執行時間: {execution_time} 秒")
 
     # 第一張圖：地表溫度比較
-    Map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
-    Map1.split_map(
-        geemap.ee_tile_layer(lst_2014, vis_params_temp, "2014 LST"),
-        geemap.ee_tile_layer(lst_2024, vis_params_temp, "2024 LST")
+Map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
+Map1.split_map(
+    geemap.ee_tile_layer(lst_2014, vis_params_temp, "2014 LST"),
+    geemap.ee_tile_layer(lst_2024, vis_params_temp, "2024 LST")
     )
 
-    st.subheader("地表溫度比較圖")
-    Map1.to_streamlit(width=800, height=600)
+st.subheader("地表溫度比較圖")
+Map1.to_streamlit(width=800, height=600)
 
     # 第二張圖：土地利用分類比較
-    Map2 = geemap.Map(center=[22.9, 120.6], zoom=9)
-    Map2.split_map(
-        geemap.ee_tile_layer(class_2014, vis_params_class, "2014 Land Cover"),
-        geemap.ee_tile_layer(class_2024, vis_params_class, "2024 Land Cover")
+Map2 = geemap.Map(center=[22.9, 120.6], zoom=9)
+Map2.split_map(
+    geemap.ee_tile_layer(class_2014, vis_params_class, "2014 Land Cover"),
+    geemap.ee_tile_layer(class_2024, vis_params_class, "2024 Land Cover")
     )
 
-    st.subheader("土地利用分類比較圖")
-    Map2.to_streamlit(width=800, height=600)
+st.subheader("土地利用分類比較圖")
+Map2.to_streamlit(width=800, height=600)
 
 def test():
     L = [i for i in range(100)]  # 生成一個列表
