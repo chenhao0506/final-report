@@ -105,7 +105,7 @@ timer = timeit.Timer(test)
 execution_time = timer.timeit(number=100000)
 
     # Streamlit 介面與地圖顯示
-st.title("10年間高雄地區綜整分析比較-session state")
+st.title("10年間高雄地區綜整分析比較-重做版")
 st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdown to reflect both years
 st.markdown(f"執行時間: {execution_time} 秒")
 
