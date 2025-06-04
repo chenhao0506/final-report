@@ -1,6 +1,7 @@
 import streamlit as st
 import geemap.foliumap as geemap
 import ee
+import json
 from google.oauth2 import service_account
 
 # 初始化 GEE 驗證
