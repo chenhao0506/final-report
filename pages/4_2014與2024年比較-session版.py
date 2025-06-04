@@ -2,6 +2,7 @@ import streamlit as st
 import geemap.foliumap as geemap
 import ee
 import json
+import timeit
 from google.oauth2 import service_account
 
 # GEE 認證
@@ -120,11 +121,13 @@ def get_classified(image):
     st.session_state.lst_2024_image = calculate_lst(image_2024)
     st.session_state.class_2024_image = get_classified(image_2024)
 
-    st.success("GEE 影像處理完成，結果已存入 session_state！")
+def test():
+    L = [i for i in range(100)]  # 生成一個列表
+    
+# 使用 timeit.timeit 測量 test() 的執行時間
+execution_time = timeit.timeit("test()", setup="from __main__ import test", number=100000)
+ https://vocus.cc/article/66e46596fd8978000180f5ac
 
-# --- Streamlit 介面與地圖顯示 ---
-st.title("2014 與 2024 年高雄地區分析比較")
-st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdown to reflect both years
 
 # 確保 session_state 中的影像已經存在才能進行地圖顯示
 # Only display the maps if all required images are available in session_state.
@@ -162,3 +165,9 @@ if (st.session_state.lst_2014_image is not None and
 
     st.subheader("土地利用分類比較圖")
     Map2.to_streamlit(width=800, height=600)
+
+# --- Streamlit 介面與地圖顯示 ---
+st.title("10年間高雄地區綜整分析比較-session state")
+st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdown to reflect both years
+st.markdown("分析時間："{execution_time} "秒")
+
