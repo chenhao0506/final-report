@@ -125,7 +125,7 @@ execution_time = timer.timeit(number=100000)
 # Streamlit 介面開始
 st.title("10年間高雄地區綜整分析比較 - 使用 Session State")
 st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月")
-st.markdown(f"執行時間: {execution_time:.4f} 秒")
+st.markdown(f"執行時間: {execution_time} 秒")
 
 # 僅當影像載入完成後才顯示地圖
 if (st.session_state.lst_2014_image and
