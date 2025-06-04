@@ -138,6 +138,11 @@ if (st.session_state.lst_2014_image is not None and
     vis_params_class = st.session_state.vis_params_class
     legend_dict = st.session_state.classified_legend_dict # Retrieve legend dict
 
+    # Streamlit 介面與地圖顯示
+st.title("10年間高雄地區綜整分析比較-session state")
+st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdown to reflect both years
+st.markdown(f"執行時間: {execution_time} 秒")
+
     # 第一張圖：地表溫度比較
     Map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
     Map1.split_map(
@@ -165,8 +170,5 @@ def test():
 timer = timeit.Timer(test)
 execution_time = timer.timeit(number=100000)
 
-# --- Streamlit 介面與地圖顯示 ---
-st.title("10年間高雄地區綜整分析比較-session state")
-st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdown to reflect both years
-st.markdown(f"執行時間: {execution_time} 秒")
+
 
