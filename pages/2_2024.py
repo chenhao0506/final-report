@@ -31,11 +31,6 @@ if 'classified_vis_params' not in st.session_state:
 if 'classified_legend_dict' not in st.session_state:
     st.session_state.classified_legend_dict = None
 
-# --- GEE 數據處理和計算 (僅在結果不在 session_state 時執行) ---
-# Perform GEE computations only if the results are not already in session_state.
-# This prevents re-running expensive computations on every Streamlit rerun.
-if st.session_state.lst_image is None or st.session_state.classified_image is None:
-    st.info("首次載入或重新計算中，請稍候...") # Inform the user that computations are running.
 
     # 設定 AOI 與時間範圍
     aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
@@ -149,7 +144,6 @@ if st.session_state.lst_image is None or st.session_state.classified_image is No
         'palette': list(st.session_state.classified_legend_dict.values())
     }
 
-    st.success("GEE 影像處理完成，結果已存入 session_state！")
 
 # --- Streamlit 介面與地圖顯示 ---
 # Streamlit interface and map display
@@ -177,5 +171,3 @@ if st.session_state.lst_image is not None and st.session_state.classified_image 
     # Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict)
 
     Map.to_streamlit(width=800, height=600)
-else:
-    st.warning("影像正在處理中，請稍候...") # Display a message if images are still being processed.
