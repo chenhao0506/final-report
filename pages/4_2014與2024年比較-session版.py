@@ -158,11 +158,12 @@ if (st.session_state.lst_2014_image is not None and
     st.subheader("土地利用分類比較圖")
     Map2.to_streamlit(width=800, height=600)
 
-test():
+def test():
     L = [i for i in range(100)]  # 生成一個列表
     
-# 使用 timeit.timeit 測量 test() 的執行時間
-execution_time = timeit.timeit("test()", setup="from __main__ import test", number=100000)
+# 使用 Timer 對函數直接計時（不用字串與 setup）
+timer = timeit.Timer(test)
+execution_time = timer.timeit(number=100000)
 
 # --- Streamlit 介面與地圖顯示 ---
 st.title("10年間高雄地區綜整分析比較-session state")
