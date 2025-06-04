@@ -138,6 +138,13 @@ if (st.session_state.lst_2014_image is not None and
     vis_params_class = st.session_state.vis_params_class
     legend_dict = st.session_state.classified_legend_dict # Retrieve legend dict
 
+def test():
+    L = [i for i in range(100)]  # 生成一個列表
+    
+# 使用 Timer 對函數直接計時（不用字串與 setup）
+timer = timeit.Timer(test)
+execution_time = timer.timeit(number=100000)
+
     # Streamlit 介面與地圖顯示
 st.title("10年間高雄地區綜整分析比較-session state")
 st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdown to reflect both years
@@ -163,12 +170,6 @@ Map2.split_map(
 st.subheader("土地利用分類比較圖")
 Map2.to_streamlit(width=800, height=600)
 
-def test():
-    L = [i for i in range(100)]  # 生成一個列表
-    
-# 使用 Timer 對函數直接計時（不用字串與 setup）
-timer = timeit.Timer(test)
-execution_time = timer.timeit(number=100000)
 
 
 
