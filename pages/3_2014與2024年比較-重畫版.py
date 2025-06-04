@@ -97,6 +97,18 @@ image_2024 = get_processed_image(['2024-07-01', '2024-07-31'])
 lst_2024 = calculate_lst(image_2024)
 class_2024 = get_classified(image_2024)
 
+def test():
+    L = [i for i in range(100)]  # 生成一個列表
+    
+# 使用 Timer 對函數直接計時（不用字串與 setup）
+timer = timeit.Timer(test)
+execution_time = timer.timeit(number=100000)
+
+    # Streamlit 介面與地圖顯示
+st.title("10年間高雄地區綜整分析比較-session state")
+st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdown to reflect both years
+st.markdown(f"執行時間: {execution_time} 秒")
+
 # 第一張圖：地表溫度比較
 Map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
 Map1.split_map(
@@ -110,9 +122,6 @@ Map2.split_map(
     geemap.ee_tile_layer(class_2014, vis_params_class, "2014 Land Cover"),
     geemap.ee_tile_layer(class_2024, vis_params_class, "2024 Land Cover")
 )
-
-# Streamlit 介面
-st.title("2014 與 2024 年高雄地區分析比較")
 
 st.subheader("地表溫度比較圖")
 Map1.to_streamlit(width=800, height=600)
