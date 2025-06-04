@@ -1,178 +1,112 @@
 import streamlit as st
 import geemap.foliumap as geemap
 import ee
-import json
 from google.oauth2 import service_account
 
-# 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
+# 初始化 GEE 驗證
 service_account_info = st.secrets["GEE_SERVICE_ACCOUNT"]
-
-# 使用 google-auth 進行 GEE 授權
 credentials = service_account.Credentials.from_service_account_info(
     service_account_info,
     scopes=["https://www.googleapis.com/auth/earthengine"]
 )
-
-# 初始化 GEE
 ee.Initialize(credentials)
 
-# 定義共用函數
+# 區域與時間設定
+aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
+dates = {
+    "2014": ("2014-07-01", "2014-07-31"),
+    "2024": ("2024-07-01", "2024-07-31")
+}
+
+# 共用函數
 def applyScaleFactors(image):
-    opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
-    thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
-    return image.addBands(opticalBands, overwrite=True).addBands(thermalBands, overwrite=True)
+    optical = image.select('SR_B.').multiply(0.0000275).add(-0.2)
+    thermal = image.select('ST_B.*').multiply(0.00341802).add(149.0)
+    return image.addBands(optical, overwrite=True).addBands(thermal, overwrite=True)
 
 def cloudMask(image):
-    cloud_shadow_bitmask = (1 << 3)
-    cloud_bitmask = (1 << 5)
+    cloud_shadow = (1 << 3)
+    cloud = (1 << 5)
     qa = image.select('QA_PIXEL')
-    mask = qa.bitwiseAnd(cloud_shadow_bitmask).eq(0).And(
-           qa.bitwiseAnd(cloud_bitmask).eq(0))
+    mask = qa.bitwiseAnd(cloud_shadow).eq(0).And(qa.bitwiseAnd(cloud).eq(0))
     return image.updateMask(mask)
 
-# ========== 第一組資料（2014 年 7 月）==========
-aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
-startDate_1 = '2014-07-01'
-endDate_1 = '2014-07-31'
-
-collection_1 = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
-                .filterBounds(aoi)
-                .filterDate(startDate_1, endDate_1))
-
-image_1 = (collection_1
+def get_LST_and_NDVI(start, end):
+    col = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+           .filterBounds(aoi)
+           .filterDate(start, end)
            .map(applyScaleFactors)
-           .map(cloudMask)
-           .median()
-           .clip(aoi))
+           .map(cloudMask))
 
-ndvi_1 = image_1.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI_1')
+    img = col.median().clip(aoi)
+    ndvi = img.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
 
-ndvi_min_1 = ee.Number(ndvi_1.reduceRegion(
-    reducer=ee.Reducer.min(),
-    geometry=aoi,
-    scale=30,
-    maxPixels=1e9
-).values().get(0))
+    ndvi_min = ee.Number(ndvi.reduceRegion(ee.Reducer.min(), aoi, 30).values().get(0))
+    ndvi_max = ee.Number(ndvi.reduceRegion(ee.Reducer.max(), aoi, 30).values().get(0))
+    fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)).pow(2).rename("FV")
+    em = fv.multiply(0.004).add(0.986).rename("EM")
+    thermal = img.select('ST_B10')
 
-ndvi_max_1 = ee.Number(ndvi_1.reduceRegion(
-    reducer=ee.Reducer.max(),
-    geometry=aoi,
-    scale=30,
-    maxPixels=1e9
-).values().get(0))
+    lst = thermal.expression(
+        '(TB / (1 + (0.00115 * (TB / 1.438)) * log(em))) - 273.15',
+        {'TB': thermal, 'em': em}
+    ).rename('LST')
 
-fv_1 = ndvi_1.subtract(ndvi_min_1).divide(ndvi_max_1.subtract(ndvi_min_1)).pow(2).rename("FV_1")
-em_1 = fv_1.multiply(0.004).add(0.986).rename("EM_1")
-thermal_1 = image_1.select('ST_B10').rename('thermal_1')
+    return img, ndvi, lst
 
-lst_1 = thermal_1.expression(
-    '(TB / (1 + (0.00115 * (TB / 1.438)) * log(em))) - 273.15',
-    {
-        'TB': thermal_1,
-        'em': em_1
-    }
-).rename('LST_1')
+def classify_unsupervised(image):
+    bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
+    samples = bands.sample(region=aoi, scale=30, numPixels=5000, seed=0, geometries=True)
+    clusterer = ee.Clusterer.wekaXMeans().train(samples)
+    result = bands.cluster(clusterer)
+    return result
 
-# ========== 第二組資料（2024 年 7 月）==========
-roi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
-startDate_2 = '2024-07-01'
-endDate_2 = '2024-07-31'
-
-collection_2 = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
-                .filterBounds(roi)
-                .filterDate(startDate_2, endDate_2))
-
-image_2 = (collection_2
-           .map(applyScaleFactors)
-           .map(cloudMask)
-           .median()
-           .clip(roi))
-
-ndvi_2 = image_2.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI_2')
-
-ndvi_min_2 = ee.Number(ndvi_2.reduceRegion(
-    reducer=ee.Reducer.min(),
-    geometry=roi,
-    scale=30,
-    maxPixels=1e9
-).values().get(0))
-
-ndvi_max_2 = ee.Number(ndvi_2.reduceRegion(
-    reducer=ee.Reducer.max(),
-    geometry=roi,
-    scale=30,
-    maxPixels=1e9
-).values().get(0))
-
-fv_2 = ndvi_2.subtract(ndvi_min_2).divide(ndvi_max_2.subtract(ndvi_min_2)).pow(2).rename("FV_2")
-em_2 = fv_2.multiply(0.004).add(0.986).rename("EM_2")
-thermal_2 = image_2.select('ST_B10').rename('thermal_2')
-
-lst_2 = thermal_2.expression(
-    '(TB / (1 + (0.00115 * (TB / 1.438)) * log(em))) - 273.15',
-    {
-        'TB': thermal_2,
-        'em': em_2
-    }
-).rename('LST_2')
-
-# ========== 視覺化與 Streamlit 介面 ==========
-vis_params_001 = {
+# 視覺化參數
+lst_vis = {
     'min': 10,
     'max': 50,
-    'palette': [
-        '040274', '0502a3', '0502ce', '0602ff', '307ef3',
-        '30c8e2', '3be285', '86e26f', 'b5e22e', 'ffd611',
-        'ff8b13', 'ff0000', 'c21301', '911003'
-    ]
+    'palette': ['040274', '0502a3', '0502ce', '0602ff', '307ef3',
+                '30c8e2', '3be285', '86e26f', 'b5e22e', 'ffd611',
+                'ff8b13', 'ff0000', 'c21301', '911003']
 }
 
-Map = geemap.Map(center=[22.9, 120.6], zoom=9)
-left_layer = geemap.ee_tile_layer(lst_1, vis_params_001, '高雄地表溫度 2014')
-right_layer = geemap.ee_tile_layer(lst_2, vis_params_001, '高雄地表溫度 2024')
-Map.split_map(left_layer, right_layer)
-
-st.title("高雄地區 NDVI 與地表溫度分析")
-st.markdown("時間範圍比較：**2014 年 7 月** vs **2024 年 7 月**")
-Map.to_streamlit(width=800, height=600)
-
-
-
-#非監督式土地利用分析
-
-# 選擇分類用波段
-classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
-
-# 抽樣產生訓練資料
-training001 = classified_bands.sample(
-    region=aoi,
-    scale=30,
-    numPixels=5000,
-    seed=0,
-    geometries=True
-)
-
-# 訓練分類器並分類
-clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
-result002 = classified_bands.cluster(clusterer_XMeans)
-
-legend_dict = {
-    'zero': '#3A87AD',
-    'one': '#D94848',
-    'two': '#4CAF50',
-    'three': '#D9B382',
-    'four': '#F2D16B',
-    'five': '#A89F91',
-    'six': '#61C1E4',
-    'seven': '#7CB342',
-    'eight': '#8E7CC3'
-    }
-
-palette = list(legend_dict.values())
-
-
-vis_params_002 = {
+landuse_palette = [
+    '#3A87AD', '#D94848', '#4CAF50', '#D9B382', '#F2D16B',
+    '#A89F91', '#61C1E4', '#7CB342', '#8E7CC3'
+]
+landuse_vis = {
     'min': 0,
-    'max': len(palette) - 1,
-    'palette': palette
+    'max': len(landuse_palette) - 1,
+    'palette': landuse_palette
 }
+
+# 資料準備
+img_2014, ndvi_2014, lst_2014 = get_LST_and_NDVI(*dates["2014"])
+img_2024, ndvi_2024, lst_2024 = get_LST_and_NDVI(*dates["2024"])
+
+lu_2014 = classify_unsupervised(img_2014)
+lu_2024 = classify_unsupervised(img_2024)
+
+# Streamlit 介面
+st.title("高雄地區遙測分析系統")
+tab1, tab2 = st.tabs(["地表溫度分析", "土地利用分析"])
+
+with tab1:
+    st.subheader("地表溫度比較 (LST)")
+    st.markdown("時間範圍：**2014 年 7 月** vs **2024 年 7 月**")
+    map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
+    map1.split_map(
+        geemap.ee_tile_layer(lst_2014, lst_vis, 'LST 2014'),
+        geemap.ee_tile_layer(lst_2024, lst_vis, 'LST 2024')
+    )
+    map1.to_streamlit(width=800, height=600)
+
+with tab2:
+    st.subheader("非監督式土地利用分類")
+    st.markdown("時間範圍：**2014 年 7 月** vs **2024 年 7 月**")
+    map2 = geemap.Map(center=[22.9, 120.6], zoom=9)
+    map2.split_map(
+        geemap.ee_tile_layer(lu_2014, landuse_vis, '土地利用 2014'),
+        geemap.ee_tile_layer(lu_2024, landuse_vis, '土地利用 2024')
+    )
+    map2.to_streamlit(width=800, height=600)
