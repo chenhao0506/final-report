@@ -46,15 +46,20 @@ def get_LST(start, end):
 
     fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)).pow(2).rename("FV")
     em = fv.multiply(0.004).add(0.986).rename("EM")
-    thermal = img.select('ST_B10')
 
-    # GEE 的 expression 支援內建 log()
+    # 過濾 EM 為正的區域（避免 log(0)）
+    em = em.updateMask(em.gt(0))
+
+    thermal = img.select('ST_B10').updateMask(em.mask())  # 保持相同遮罩
+
     lst = thermal.expression(
         '(TB / (1 + (0.00115 * (TB / 1.438)) * log(EM))) - 273.15',
         {'TB': thermal, 'EM': em}
     ).rename('LST')
 
-    lst = lst.updateMask(lst.gt(0).And(lst.lt(60))).unmask(0)
+    # 過濾合理的溫度範圍（10~50°C）
+    lst = lst.updateMask(lst.gt(10).And(lst.lt(50)))
+
     return img, lst
 
 # 非監督式分類
