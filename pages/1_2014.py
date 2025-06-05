@@ -33,10 +33,6 @@ if f'classified_vis_params_{PAGE_KEY}' not in st.session_state:
 if f'classified_legend_dict_{PAGE_KEY}' not in st.session_state:
     st.session_state[f'classified_legend_dict_{PAGE_KEY}'] = None
 
-# --- GEE 數據處理和計算 (僅在結果不在 session_state 時執行，使用 PAGE_KEY) ---
-if st.session_state[f'lst_image_{PAGE_KEY}'] is None or st.session_state[f'classified_image_{PAGE_KEY}'] is None:
-    st.info("首次載入或重新計算中，請稍候...")
-
     # 設定 AOI 與時間範圍
     aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
     startDate = '2014-07-01'
