@@ -5,7 +5,7 @@ import json
 from google.oauth2 import service_account
 
 # --- START MODIFICATION ---
-PAGE_KEY = "2014" # 此頁面資料的唯一識別符
+PAGE_KEY = "2014"
 # --- END MODIFICATION ---
 
 # 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
@@ -21,7 +21,7 @@ credentials = service_account.Credentials.from_service_account_info(
 if not ee.data._initialized:
     ee.Initialize(credentials)
 
-# 初始化 Session State (使用 PAGE_KEY)
+# 初始化 Session State
 if f'lst_image_{PAGE_KEY}' not in st.session_state:
     st.session_state[f'lst_image_{PAGE_KEY}'] = None
 if f'lst_vis_params_{PAGE_KEY}' not in st.session_state:
@@ -145,11 +145,11 @@ if f'classified_legend_dict_{PAGE_KEY}' not in st.session_state:
 st.title("高雄地區地表溫度與土地利用分析")
 st.markdown("時間範圍：2014 年 7 月")
 
-# 確保 session_state 中的影像已經存在才能進行地圖顯示 (使用 PAGE_KEY)
+# 確保 session_state 中的影像已經存在才能進行地圖顯示
 if st.session_state[f'lst_image_{PAGE_KEY}'] is not None and st.session_state[f'classified_image_{PAGE_KEY}'] is not None:
     Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 
-    # 從 session_state 取出影像和可視化參數 (使用 PAGE_KEY)
+    # 從 session_state 取出影像和可視化參數
     lst = st.session_state[f'lst_image_{PAGE_KEY}']
     vis_params_001 = st.session_state[f'lst_vis_params_{PAGE_KEY}']
 
