@@ -98,9 +98,9 @@ lst_2024 = calculate_lst(image_2024)
 class_2024 = get_classified(image_2024)
 
 def test():
-    L = [i for i in range(100)]  # 生成一個列表
+    L = [i for i in range(100)] 
     
-# 使用 Timer 對函數直接計時（不用字串與 setup）
+# 使用 Timer 對函數計時
 timer = timeit.Timer(test)
 execution_time = timer.timeit(number=100000)
 
