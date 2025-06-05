@@ -1,8 +1,10 @@
 import streamlit as st
 import geemap.foliumap as geemap
 import ee
-import timeit
+import time
 from google.oauth2 import service_account
+
+start_time = time.time()
 
 # GEE 認證
 service_account_info = st.secrets["GEE_SERVICE_ACCOUNT"]
@@ -115,17 +117,9 @@ if st.session_state.lst_2024_image is None or st.session_state.class_2024_image 
     st.session_state.lst_2024_image = calculate_lst(image_2024)
     st.session_state.class_2024_image = get_classified(image_2024)
 
-# Timer 測試
-def test():
-    L = [i for i in range(100)]  # 生成一個列表
-
-timer = timeit.Timer(test)
-execution_time = timer.timeit(number=100000)
-
 # Streamlit 介面開始
 st.title("10年間高雄地區綜整分析比較 - 使用 Session State")
 st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月")
-st.markdown(f"執行時間: {execution_time} 秒")
 
 # 僅當影像載入完成後才顯示地圖
 if (st.session_state.lst_2014_image and
@@ -159,3 +153,7 @@ if (st.session_state.lst_2014_image and
         geemap.ee_tile_layer(class_2024, vis_params_class, "2024 Land Cover")
     )
     Map2.to_streamlit(width=800, height=600)
+
+end_time = time.time()
+elapsed_time = end_time - start_time
+st.markdown(f"執行時間: {elapsed_time} 秒")
