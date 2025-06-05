@@ -5,7 +5,7 @@ import json
 from google.oauth2 import service_account
 
 # --- START MODIFICATION ---
-PAGE_KEY = "2024" # 此頁面資料的唯一識別符
+PAGE_KEY = "2024" 
 # --- END MODIFICATION ---
 
 # 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
@@ -34,10 +34,6 @@ if f'classified_legend_dict_{PAGE_KEY}' not in st.session_state:
     st.session_state[f'classified_legend_dict_{PAGE_KEY}'] = None
 
 # --- GEE 數據處理和計算 (僅在結果不在 session_state 時執行，使用 PAGE_KEY) ---
-# 注意：你的原始 2_2024.py 缺少了這個最外層的 if 判斷，我已經幫你加上了。
-# 這樣可以確保只有在 session state 變數為 None 時才執行耗時的 GEE 計算。
-if st.session_state[f'lst_image_{PAGE_KEY}'] is None or st.session_state[f'classified_image_{PAGE_KEY}'] is None:
-    st.info("首次載入或重新計算中，請稍候...")
 
     # 設定 AOI 與時間範圍
     aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
@@ -152,11 +148,11 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is None or st.session_state[f'class
 st.title("高雄地區地表溫度分析與土地利用分析")
 st.markdown("時間範圍：2024 年 7 月")
 
-# 確保 session_state 中的影像已經存在才能進行地圖顯示 (使用 PAGE_KEY)
+# 確保 session_state 中的影像已經存在才能進行地圖顯示
 if st.session_state[f'lst_image_{PAGE_KEY}'] is not None and st.session_state[f'classified_image_{PAGE_KEY}'] is not None:
     Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 
-    # 從 session_state 取出影像和可視化參數 (使用 PAGE_KEY)
+    # 從 session_state 取出影像和可視化參數
     lst = st.session_state[f'lst_image_{PAGE_KEY}']
     vis_params_001 = st.session_state[f'lst_vis_params_{PAGE_KEY}']
 
