@@ -2,8 +2,10 @@ import streamlit as st
 import geemap.foliumap as geemap
 import ee
 import json
-import timeit
+import time
 from google.oauth2 import service_account
+
+start_time = time.time()
 
 # GEE 認證
 service_account_info = st.secrets["GEE_SERVICE_ACCOUNT"]
@@ -97,17 +99,9 @@ image_2024 = get_processed_image(['2024-07-01', '2024-07-31'])
 lst_2024 = calculate_lst(image_2024)
 class_2024 = get_classified(image_2024)
 
-def test():
-    L = [i for i in range(100)] 
-    
-# 使用 Timer 對函數計時
-timer = timeit.Timer(test)
-execution_time = timer.timeit(number=100000)
-
     # Streamlit 介面與地圖顯示
 st.title("10年間高雄地區綜整分析比較-重做版")
 st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月") # Updated markdown to reflect both years
-st.markdown(f"執行時間: {execution_time} 秒")
 
 # 第一張圖：地表溫度比較
 Map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
@@ -128,3 +122,7 @@ Map1.to_streamlit(width=800, height=600)
 
 st.subheader("土地利用分類比較圖")
 Map2.to_streamlit(width=800, height=600)
+
+end_time = time.time()
+elapsed_time = end_time - start_time
+st.markdown(f"執行時間: {elapsed_time} 秒")
