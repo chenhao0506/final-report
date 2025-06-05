@@ -4,6 +4,10 @@ import ee
 import json
 from google.oauth2 import service_account
 
+# --- START MODIFICATION ---
+PAGE_KEY = "2024" # 此頁面資料的唯一識別符
+# --- END MODIFICATION ---
+
 # 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
 service_account_info = st.secrets["GEE_SERVICE_ACCOUNT"]
 
@@ -14,28 +18,31 @@ credentials = service_account.Credentials.from_service_account_info(
 )
 
 # 初始化 GEE (確保只初始化一次)
-# This ensures that Earth Engine is initialized only once per Streamlit app run.
 if not ee.data._initialized:
     ee.Initialize(credentials)
 
-# 初始化 Session State
-# Initialize session state variables. This ensures they exist even on first run.
-if 'lst_image' not in st.session_state:
-    st.session_state.lst_image = None
-if 'lst_vis_params' not in st.session_state:
-    st.session_state.lst_vis_params = None
-if 'classified_image' not in st.session_state:
-    st.session_state.classified_image = None
-if 'classified_vis_params' not in st.session_state:
-    st.session_state.classified_vis_params = None
-if 'classified_legend_dict' not in st.session_state:
-    st.session_state.classified_legend_dict = None
+# 初始化 Session State (使用 PAGE_KEY)
+if f'lst_image_{PAGE_KEY}' not in st.session_state:
+    st.session_state[f'lst_image_{PAGE_KEY}'] = None
+if f'lst_vis_params_{PAGE_KEY}' not in st.session_state:
+    st.session_state[f'lst_vis_params_{PAGE_KEY}'] = None
+if f'classified_image_{PAGE_KEY}' not in st.session_state:
+    st.session_state[f'classified_image_{PAGE_KEY}'] = None
+if f'classified_vis_params_{PAGE_KEY}' not in st.session_state:
+    st.session_state[f'classified_vis_params_{PAGE_KEY}'] = None
+if f'classified_legend_dict_{PAGE_KEY}' not in st.session_state:
+    st.session_state[f'classified_legend_dict_{PAGE_KEY}'] = None
 
+# --- GEE 數據處理和計算 (僅在結果不在 session_state 時執行，使用 PAGE_KEY) ---
+# 注意：你的原始 2_2024.py 缺少了這個最外層的 if 判斷，我已經幫你加上了。
+# 這樣可以確保只有在 session state 變數為 None 時才執行耗時的 GEE 計算。
+if st.session_state[f'lst_image_{PAGE_KEY}'] is None or st.session_state[f'classified_image_{PAGE_KEY}'] is None:
+    st.info("首次載入或重新計算中，請稍候...")
 
     # 設定 AOI 與時間範圍
     aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
-    startDate = '2024-07-01' # Updated date as per user's latest code
-    endDate = '2024-07-31'   # Updated date as per user's latest code
+    startDate = '2024-07-01'
+    endDate = '2024-07-31'
 
     # 資料處理函數
     def applyScaleFactors(image):
@@ -70,14 +77,14 @@ if 'classified_legend_dict' not in st.session_state:
         reducer=ee.Reducer.min(),
         geometry=aoi,
         scale=30,
-        maxPixels=1e9 # Set a sufficiently large value
+        maxPixels=1e9
     ).values().get(0))
 
     ndvi_max = ee.Number(ndvi.reduceRegion(
         reducer=ee.Reducer.max(),
         geometry=aoi,
         scale=30,
-        maxPixels=1e9 # Set a sufficiently large value
+        maxPixels=1e9
     ).values().get(0))
 
     fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)) \
@@ -86,7 +93,7 @@ if 'classified_legend_dict' not in st.session_state:
     thermal = image.select('ST_B10').rename('thermal')
 
     # Calculate LST
-    lst = thermal.expression( # Using original variable name 'lst'
+    calculated_lst = thermal.expression(
         '(TB / (1 + (0.00115 * (TB / 1.438)) * log(em))) - 273.15',
         {
             'TB': thermal.select('thermal'),
@@ -94,9 +101,9 @@ if 'classified_legend_dict' not in st.session_state:
         }
     ).rename('LST')
 
-    # Store LST and its visualization parameters in session_state
-    st.session_state.lst_image = lst # Assign the calculated lst to session_state
-    st.session_state.lst_vis_params = {
+    # Store LST and its visualization parameters in session_state (使用 PAGE_KEY)
+    st.session_state[f'lst_image_{PAGE_KEY}'] = calculated_lst
+    st.session_state[f'lst_vis_params_{PAGE_KEY}'] = {
         'min': 10,
         'max': 50,
         'palette': [
@@ -107,10 +114,8 @@ if 'classified_legend_dict' not in st.session_state:
     }
 
     # 非監督式土地利用分析
-    # Select bands for classification
     classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
 
-    # Sample training data
     training001 = classified_bands.sample(
         region=aoi,
         scale=30,
@@ -119,14 +124,13 @@ if 'classified_legend_dict' not in st.session_state:
         geometries=True
     )
 
-    # Train classifier and classify
     clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
-    result002 = classified_bands.cluster(clusterer_XMeans) # Using original variable name 'result002'
+    calculated_result002 = classified_bands.cluster(clusterer_XMeans)
 
-    # Store classified image and its visualization parameters/legend in session_state
-    st.session_state.classified_image = result002 # Corrected assignment to result002
+    # Store classified image and its visualization parameters/legend in session_state (使用 PAGE_KEY)
+    st.session_state[f'classified_image_{PAGE_KEY}'] = calculated_result002
 
-    st.session_state.classified_legend_dict = {
+    st.session_state[f'classified_legend_dict_{PAGE_KEY}'] = {
         'zero': '#3A87AD',
         'one': '#D94848',
         'two': '#4CAF50',
@@ -138,30 +142,27 @@ if 'classified_legend_dict' not in st.session_state:
         'eight': '#8E7CC3'
     }
 
-    st.session_state.classified_vis_params = {
+    st.session_state[f'classified_vis_params_{PAGE_KEY}'] = {
         'min': 0,
-        'max': len(st.session_state.classified_legend_dict.values()) - 1,
-        'palette': list(st.session_state.classified_legend_dict.values())
+        'max': len(st.session_state[f'classified_legend_dict_{PAGE_KEY}'].values()) - 1,
+        'palette': list(st.session_state[f'classified_legend_dict_{PAGE_KEY}'].values())
     }
 
-
 # --- Streamlit 介面與地圖顯示 ---
-# Streamlit interface and map display
 st.title("高雄地區地表溫度分析與土地利用分析")
-st.markdown("時間範圍：2024 年 7 月") # Updated date in markdown
+st.markdown("時間範圍：2024 年 7 月")
 
-# 確保 session_state 中的影像已經存在才能進行地圖顯示
-# Only display the map if both LST and classified images are available in session_state.
-if st.session_state.lst_image is not None and st.session_state.classified_image is not None:
+# 確保 session_state 中的影像已經存在才能進行地圖顯示 (使用 PAGE_KEY)
+if st.session_state[f'lst_image_{PAGE_KEY}'] is not None and st.session_state[f'classified_image_{PAGE_KEY}'] is not None:
     Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 
-    # 從 session_state 取出影像和可視化參數
-    lst = st.session_state.lst_image
-    vis_params_001 = st.session_state.lst_vis_params
+    # 從 session_state 取出影像和可視化參數 (使用 PAGE_KEY)
+    lst = st.session_state[f'lst_image_{PAGE_KEY}']
+    vis_params_001 = st.session_state[f'lst_vis_params_{PAGE_KEY}']
 
-    result002 = st.session_state.classified_image
-    vis_params_002 = st.session_state.classified_vis_params
-    legend_dict = st.session_state.classified_legend_dict
+    result002 = st.session_state[f'classified_image_{PAGE_KEY}']
+    vis_params_002 = st.session_state[f'classified_vis_params_{PAGE_KEY}']
+    legend_dict = st.session_state[f'classified_legend_dict_{PAGE_KEY}']
 
     left_layer = geemap.ee_tile_layer(lst, vis_params_001, 'hot island in Kaohsiung')
     right_layer = geemap.ee_tile_layer(result002, vis_params_002, 'wekaXMeans classified land cover')
