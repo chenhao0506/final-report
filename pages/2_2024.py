@@ -149,5 +149,3 @@ if st.session_state.lst_2024_image is not None and st.session_state.class_2024_i
     Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict) # 為單獨頁面添加圖例
 
     Map.to_streamlit(width=800, height=600)
-else:
-    st.info("請等待 2024 年資料載入...")
