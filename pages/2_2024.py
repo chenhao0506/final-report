@@ -4,14 +4,8 @@ import ee
 import json
 from google.oauth2 import service_account
 
-# --- START MODIFICATION ---
-PAGE_KEY = "2024" 
-# --- END MODIFICATION ---
-
-# 從 Streamlit Secrets 讀取 GEE 服務帳戶金鑰 JSON
+# --- GEE 認證 ---
 service_account_info = st.secrets["GEE_SERVICE_ACCOUNT"]
-
-# 使用 google-auth 進行 GEE 授權
 credentials = service_account.Credentials.from_service_account_info(
     service_account_info,
     scopes=["https://www.googleapis.com/auth/earthengine"]
@@ -21,22 +15,41 @@ credentials = service_account.Credentials.from_service_account_info(
 if not ee.data._initialized:
     ee.Initialize(credentials)
 
-# 初始化 Session State (使用 PAGE_KEY)
-if f'lst_image_{PAGE_KEY}' not in st.session_state:
-    st.session_state[f'lst_image_{PAGE_KEY}'] = None
-if f'lst_vis_params_{PAGE_KEY}' not in st.session_state:
-    st.session_state[f'lst_vis_params_{PAGE_KEY}'] = None
-if f'classified_image_{PAGE_KEY}' not in st.session_state:
-    st.session_state[f'classified_image_{PAGE_KEY}'] = None
-if f'classified_vis_params_{PAGE_KEY}' not in st.session_state:
-    st.session_state[f'classified_vis_params_{PAGE_KEY}'] = None
-if f'classified_legend_dict_{PAGE_KEY}' not in st.session_state:
-    st.session_state[f'classified_legend_dict_{PAGE_KEY}'] = None
+# --- 初始化 Session State 和 GEE 資料處理 ---
+# 使用第三個程式碼預期的鍵名來初始化和儲存資料
+if 'lst_2024_image' not in st.session_state or st.session_state.lst_2024_image is None:
+    st.session_state.lst_2024_image = None # 初始化為 None
+if 'class_2024_image' not in st.session_state or st.session_state.class_2024_image is None:
+    st.session_state.class_2024_image = None # 初始化為 None
 
-# --- GEE 數據處理和計算 (僅在結果不在 session_state 時執行，使用 PAGE_KEY) ---
-# The entire block below should be inside an 'if' condition to ensure it runs only if data is not already in session_state.
-# Otherwise, it will recompute everything on every rerun, which is inefficient.
-if st.session_state[f'lst_image_{PAGE_KEY}'] is None: # Added this if condition
+# 初始化通用的視覺化參數，如果它們尚未被設定 (確保與 2014 頁面一致)
+if 'vis_params_temp' not in st.session_state:
+    st.session_state.vis_params_temp = {
+        'min': 10,
+        'max': 50,
+        'palette': [
+            '040274', '0502a3', '0502ce', '0602ff', '307ef3',
+            '30c8e2', '3be285', '86e26f', 'b5e22e', 'ffd611',
+            'ff8b13', 'ff0000', 'c21301', '911003'
+        ]
+    }
+if 'classified_legend_dict' not in st.session_state:
+    st.session_state.classified_legend_dict = {
+        'zero': '#3A87AD', 'one': '#D94848', 'two': '#4CAF50', 'three': '#D9B382',
+        'four': '#F2D16B', 'five': '#A89F91', 'six': '#61C1E4', 'seven': '#7CB342',
+        'eight': '#8E7CC3'
+    }
+if 'vis_params_class' not in st.session_state:
+    st.session_state.vis_params_class = {
+        'min': 0,
+        'max': len(st.session_state.classified_legend_dict.values()) - 1,
+        'palette': list(st.session_state.classified_legend_dict.values())
+    }
+
+# 僅在資料尚未載入時執行 GEE 計算
+if st.session_state.lst_2024_image is None: # Changed condition
+    st.info("正在載入 2024 年影像資料，請稍候...")
+
     # 設定 AOI 與時間範圍
     aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
     startDate = '2024-07-01'
@@ -53,7 +66,7 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is None: # Added this if condition
         cloud_bitmask = (1 << 5)
         qa = image.select('QA_PIXEL')
         mask = qa.bitwiseAnd(cloud_shadow_bitmask).eq(0).And(
-                            qa.bitwiseAnd(cloud_bitmask).eq(0))
+                                qa.bitwiseAnd(cloud_bitmask).eq(0))
         return image.updateMask(mask)
 
     # 建立影像集合
@@ -70,7 +83,6 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is None: # Added this if condition
     # 計算 NDVI
     ndvi = image.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
 
-    # Ensure maxPixels is large enough or use bestEffort=True for reduceRegion
     ndvi_min = ee.Number(ndvi.reduceRegion(
         reducer=ee.Reducer.min(),
         geometry=aoi,
@@ -99,17 +111,8 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is None: # Added this if condition
         }
     ).rename('LST')
 
-    # Store LST and its visualization parameters in session_state (使用 PAGE_KEY)
-    st.session_state[f'lst_image_{PAGE_KEY}'] = calculated_lst
-    st.session_state[f'lst_vis_params_{PAGE_KEY}'] = {
-        'min': 10,
-        'max': 50,
-        'palette': [
-            '040274', '0502a3', '0502ce', '0602ff', '307ef3',
-            '30c8e2', '3be285', '86e26f', 'b5e22e', 'ffd611',
-            'ff8b13', 'ff0000', 'c21301', '911003'
-        ]
-    }
+    # 將 LST 儲存到 session_state，使用第三個程式碼預期的鍵名
+    st.session_state.lst_2024_image = calculated_lst # Changed key
 
     # 非監督式土地利用分析
     classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
@@ -125,50 +128,32 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is None: # Added this if condition
     clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
     calculated_result002 = classified_bands.cluster(clusterer_XMeans)
 
-    # Store classified image and its visualization parameters/legend in session_state (使用 PAGE_KEY)
-    st.session_state[f'classified_image_{PAGE_KEY}'] = calculated_result002
+    # 將分類影像儲存到 session_state，使用第三個程式碼預期的鍵名
+    st.session_state.class_2024_image = calculated_result002 # Changed key
 
-    st.session_state[f'classified_legend_dict_{PAGE_KEY}'] = {
-        'zero': '#3A87AD',
-        'one': '#D94848',
-        'two': '#4CAF50',
-        'three': '#D9B382',
-        'four': '#F2D16B',
-        'five': '#A89F91',
-        'six': '#61C1E4',
-        'seven': '#7CB342',
-        'eight': '#8E7CC3'
-    }
-
-    st.session_state[f'classified_vis_params_{PAGE_KEY}'] = {
-        'min': 0,
-        'max': len(st.session_state[f'classified_legend_dict_{PAGE_KEY}'].values()) - 1,
-        'palette': list(st.session_state[f'classified_legend_dict_{PAGE_KEY}'].values())
-    }
+    st.success("2024 年影像資料載入完成！")
 
 # --- Streamlit 介面與地圖顯示 ---
 st.title("高雄地區地表溫度分析與土地利用分析")
 st.markdown("時間範圍：2024 年 7 月")
 
 # 確保 session_state 中的影像已經存在才能進行地圖顯示
-if st.session_state[f'lst_image_{PAGE_KEY}'] is not None and st.session_state[f'classified_image_{PAGE_KEY}'] is not None:
+if st.session_state.lst_2024_image is not None and st.session_state.class_2024_image is not None:
     Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 
     # 從 session_state 取出影像和可視化參數
-    # FIX: Use lst_2024 instead of lst
-    lst_2024 = st.session_state[f'lst_image_{PAGE_KEY}']
-    vis_params_001 = st.session_state[f'lst_vis_params_{PAGE_KEY}']
+    lst_2024 = st.session_state.lst_2024_image
+    class_2024 = st.session_state.class_2024_image # Changed variable name
+    
+    vis_params_temp = st.session_state.vis_params_temp
+    vis_params_class = st.session_state.vis_params_class
+    legend_dict = st.session_state.classified_legend_dict
 
-    result002 = st.session_state[f'classified_image_{PAGE_KEY}']
-    vis_params_002 = st.session_state[f'classified_vis_params_{PAGE_KEY}']
-    legend_dict = st.session_state[f'classified_legend_dict_{PAGE_KEY}']
-
-    # FIX: Pass lst_2024 to geemap.ee_tile_layer instead of lst
-    left_layer = geemap.ee_tile_layer(lst_2024, vis_params_001, 'hot island in Kaohsiung')
-    right_layer = geemap.ee_tile_layer(result002, vis_params_002, 'wekaXMeans classified land cover')
+    left_layer = geemap.ee_tile_layer(lst_2024, vis_params_temp, 'hot island in Kaohsiung (2024)')
+    right_layer = geemap.ee_tile_layer(class_2024, vis_params_class, 'wekaXMeans classified land cover (2024)')
     Map.split_map(left_layer, right_layer)
-
-    # Optionally add legend if geemap supports it directly from a dict
-    # Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict)
+    Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict) # 為單獨頁面添加圖例
 
     Map.to_streamlit(width=800, height=600)
+else:
+    st.info("請等待 2024 年資料載入...")
