@@ -49,7 +49,7 @@ if f'classified_legend_dict_{PAGE_KEY}' not in st.session_state:
         cloud_bitmask = (1 << 5)
         qa = image.select('QA_PIXEL')
         mask = qa.bitwiseAnd(cloud_shadow_bitmask).eq(0).And(
-                    qa.bitwiseAnd(cloud_bitmask).eq(0))
+                            qa.bitwiseAnd(cloud_bitmask).eq(0))
         return image.updateMask(mask)
 
     # 建立影像集合
@@ -150,6 +150,7 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is not None and st.session_state[f'
     Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 
     # 從 session_state 取出影像和可視化參數
+    # FIX: Use lst_2014 instead of lst
     lst_2014 = st.session_state[f'lst_image_{PAGE_KEY}']
     vis_params_001 = st.session_state[f'lst_vis_params_{PAGE_KEY}']
 
@@ -157,7 +158,8 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is not None and st.session_state[f'
     vis_params_002 = st.session_state[f'classified_vis_params_{PAGE_KEY}']
     legend_dict = st.session_state[f'classified_legend_dict_{PAGE_KEY}']
 
-    left_layer = geemap.ee_tile_layer(lst, vis_params_001, 'hot island in Kaohsiung')
+    # FIX: Pass lst_2014 to geemap.ee_tile_layer instead of lst
+    left_layer = geemap.ee_tile_layer(lst_2014, vis_params_001, 'hot island in Kaohsiung')
     right_layer = geemap.ee_tile_layer(result002, vis_params_002, 'wekaXMeans classified land cover')
     Map.split_map(left_layer, right_layer)
 
