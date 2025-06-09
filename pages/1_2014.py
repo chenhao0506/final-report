@@ -16,7 +16,7 @@ if not ee.data._initialized:
     ee.Initialize(credentials)
 
 # --- 初始化 Session State 和 GEE 資料處理 ---
-# 使用第三個程式碼預期的鍵名來初始化和儲存資料
+# 使用第四個程式碼預期的鍵名來初始化和儲存資料
 # 注意：這些變數應該只在需要時才進行計算
 if 'lst_2014_image' not in st.session_state or st.session_state.lst_2014_image is None:
     st.session_state.lst_2014_image = None 
@@ -109,7 +109,7 @@ calculated_lst = thermal.expression(
         }
     ).rename('LST')
 
-# 將 LST 儲存到 session_state，使用第三個程式碼預期的鍵名
+# 將 LST 儲存到 session_state，使用第四個程式碼預期的鍵名
 st.session_state.lst_2014_image = calculated_lst
 
 # 非監督式土地利用分析
@@ -126,7 +126,7 @@ training001 = classified_bands.sample(
 clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
 calculated_result002 = classified_bands.cluster(clusterer_XMeans)
 
-# 將分類影像儲存到 session_state，使用第三個程式碼預期的鍵名
+# 將分類影像儲存到 session_state，使用第四個程式碼預期的鍵名
 st.session_state.class_2014_image = calculated_result002
 
 
@@ -150,7 +150,5 @@ left_layer = geemap.ee_tile_layer(lst_2014, vis_params_temp, 'hot island in Kaoh
 right_layer = geemap.ee_tile_layer(class_2014, vis_params_class, 'wekaXMeans classified land cover (2014)')
 Map.split_map(left_layer, right_layer)
 Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict) 
+Map.to_streamlit(width=800, height=600)
 
-    Map.to_streamlit(width=800, height=600)
-else:
-    st.info("請等待 2014 年資料載入...")
