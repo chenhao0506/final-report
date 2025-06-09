@@ -148,7 +148,6 @@ legend_dict = st.session_state.classified_legend_dict
 
 left_layer = geemap.ee_tile_layer(lst_2014, vis_params_temp, 'hot island in Kaohsiung (2014)')
 right_layer = geemap.ee_tile_layer(class_2014, vis_params_class, 'wekaXMeans classified land cover (2014)')
-Map.split_map(left_layer, right_layer)
-Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict) 
+Map.split_map(left_layer, right_layer) 
 Map.to_streamlit(width=800, height=600)
 
