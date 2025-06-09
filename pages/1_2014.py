@@ -48,60 +48,60 @@ if 'vis_params_class' not in st.session_state:
     }
 
 
-    # 設定 AOI 與時間範圍
-    aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
-    startDate = '2014-07-01'
-    endDate = '2014-07-31'
+# 設定 AOI 與時間範圍
+aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
+startDate = '2014-07-01'
+endDate = '2014-07-31'
 
-    # 資料處理函數
-    def applyScaleFactors(image):
-        opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
-        thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
-        return image.addBands(opticalBands, overwrite=True).addBands(thermalBands, overwrite=True)
+# 資料處理函數
+def applyScaleFactors(image):
+    opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
+    thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
+    return image.addBands(opticalBands, overwrite=True).addBands(thermalBands, overwrite=True)
 
-    def cloudMask(image):
-        cloud_shadow_bitmask = (1 << 3)
-        cloud_bitmask = (1 << 5)
-        qa = image.select('QA_PIXEL')
-        mask = qa.bitwiseAnd(cloud_shadow_bitmask).eq(0).And(
-                                qa.bitwiseAnd(cloud_bitmask).eq(0))
-        return image.updateMask(mask)
+def cloudMask(image):
+    cloud_shadow_bitmask = (1 << 3)
+    cloud_bitmask = (1 << 5)
+    qa = image.select('QA_PIXEL')
+    mask = qa.bitwiseAnd(cloud_shadow_bitmask).eq(0).And(
+                            qa.bitwiseAnd(cloud_bitmask).eq(0))
+    return image.updateMask(mask)
 
     # 建立影像集合
-    collection = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
-                    .filterBounds(aoi)
-                    .filterDate(startDate, endDate))
+collection = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+                .filterBounds(aoi)
+                .filterDate(startDate, endDate))
 
-    image = (collection
-            .map(applyScaleFactors)
-            .map(cloudMask)
-            .median()
-            .clip(aoi))
+image = (collection
+        .map(applyScaleFactors)
+        .map(cloudMask)
+        .median()
+        .clip(aoi))
 
-    # 計算 NDVI
-    ndvi = image.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
+# 計算 NDVI
+ndvi = image.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
 
-    ndvi_min = ee.Number(ndvi.reduceRegion(
-        reducer=ee.Reducer.min(),
-        geometry=aoi,
-        scale=30,
-        maxPixels=1e9
-    ).values().get(0))
+ndvi_min = ee.Number(ndvi.reduceRegion(
+    reducer=ee.Reducer.min(),
+    geometry=aoi,
+    scale=30,
+    maxPixels=1e9
+).values().get(0))
 
-    ndvi_max = ee.Number(ndvi.reduceRegion(
-        reducer=ee.Reducer.max(),
-        geometry=aoi,
-        scale=30,
-        maxPixels=1e9
-    ).values().get(0))
+ndvi_max = ee.Number(ndvi.reduceRegion(
+    reducer=ee.Reducer.max(),
+    geometry=aoi,
+    scale=30,
+    maxPixels=1e9
+).values().get(0))
 
-    fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)) \
+fv = ndvi.subtract(ndvi_min).divide(ndvi_max.subtract(ndvi_min)) \
         .pow(2).rename("FV")
-    em = fv.multiply(0.004).add(0.986).rename("EM")
-    thermal = image.select('ST_B10').rename('thermal')
+em = fv.multiply(0.004).add(0.986).rename("EM")
+thermal = image.select('ST_B10').rename('thermal')
 
-    # Calculate LST
-    calculated_lst = thermal.expression(
+# Calculate LST
+calculated_lst = thermal.expression(
         '(TB / (1 + (0.00115 * (TB / 1.438)) * log(em))) - 273.15',
         {
             'TB': thermal.select('thermal'),
@@ -109,13 +109,13 @@ if 'vis_params_class' not in st.session_state:
         }
     ).rename('LST')
 
-    # 將 LST 儲存到 session_state，使用第三個程式碼預期的鍵名
-    st.session_state.lst_2014_image = calculated_lst
+# 將 LST 儲存到 session_state，使用第三個程式碼預期的鍵名
+st.session_state.lst_2014_image = calculated_lst
 
-    # 非監督式土地利用分析
-    classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
+# 非監督式土地利用分析
+classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
 
-    training001 = classified_bands.sample(
+training001 = classified_bands.sample(
         region=aoi,
         scale=30,
         numPixels=5000,
@@ -123,11 +123,11 @@ if 'vis_params_class' not in st.session_state:
         geometries=True
     )
 
-    clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
-    calculated_result002 = classified_bands.cluster(clusterer_XMeans)
+clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
+calculated_result002 = classified_bands.cluster(clusterer_XMeans)
 
-    # 將分類影像儲存到 session_state，使用第三個程式碼預期的鍵名
-    st.session_state.class_2014_image = calculated_result002
+# 將分類影像儲存到 session_state，使用第三個程式碼預期的鍵名
+st.session_state.class_2014_image = calculated_result002
 
 
 # --- Streamlit 介面與地圖顯示 ---
@@ -138,18 +138,18 @@ st.markdown("時間範圍：2014 年 7 月")
 if st.session_state.lst_2014_image is not None and st.session_state.class_2014_image is not None:
     Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 
-    # 從 session_state 取出影像和可視化參數
-    lst_2014 = st.session_state.lst_2014_image
-    class_2014 = st.session_state.class_2014_image
+# 從 session_state 取出影像和可視化參數
+lst_2014 = st.session_state.lst_2014_image
+class_2014 = st.session_state.class_2014_image
     
-    vis_params_temp = st.session_state.vis_params_temp
-    vis_params_class = st.session_state.vis_params_class
-    legend_dict = st.session_state.classified_legend_dict
+vis_params_temp = st.session_state.vis_params_temp
+vis_params_class = st.session_state.vis_params_class
+legend_dict = st.session_state.classified_legend_dict
 
-    left_layer = geemap.ee_tile_layer(lst_2014, vis_params_temp, 'hot island in Kaohsiung (2014)')
-    right_layer = geemap.ee_tile_layer(class_2014, vis_params_class, 'wekaXMeans classified land cover (2014)')
-    Map.split_map(left_layer, right_layer)
-    Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict) 
+left_layer = geemap.ee_tile_layer(lst_2014, vis_params_temp, 'hot island in Kaohsiung (2014)')
+right_layer = geemap.ee_tile_layer(class_2014, vis_params_class, 'wekaXMeans classified land cover (2014)')
+Map.split_map(left_layer, right_layer)
+Map.add_legend(title="土地覆蓋分類", legend_dict=legend_dict) 
 
     Map.to_streamlit(width=800, height=600)
 else:
