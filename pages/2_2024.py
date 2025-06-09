@@ -34,7 +34,9 @@ if f'classified_legend_dict_{PAGE_KEY}' not in st.session_state:
     st.session_state[f'classified_legend_dict_{PAGE_KEY}'] = None
 
 # --- GEE 數據處理和計算 (僅在結果不在 session_state 時執行，使用 PAGE_KEY) ---
-
+# The entire block below should be inside an 'if' condition to ensure it runs only if data is not already in session_state.
+# Otherwise, it will recompute everything on every rerun, which is inefficient.
+if st.session_state[f'lst_image_{PAGE_KEY}'] is None: # Added this if condition
     # 設定 AOI 與時間範圍
     aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
     startDate = '2024-07-01'
@@ -51,7 +53,7 @@ if f'classified_legend_dict_{PAGE_KEY}' not in st.session_state:
         cloud_bitmask = (1 << 5)
         qa = image.select('QA_PIXEL')
         mask = qa.bitwiseAnd(cloud_shadow_bitmask).eq(0).And(
-                    qa.bitwiseAnd(cloud_bitmask).eq(0))
+                            qa.bitwiseAnd(cloud_bitmask).eq(0))
         return image.updateMask(mask)
 
     # 建立影像集合
@@ -153,6 +155,7 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is not None and st.session_state[f'
     Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 
     # 從 session_state 取出影像和可視化參數
+    # FIX: Use lst_2024 instead of lst
     lst_2024 = st.session_state[f'lst_image_{PAGE_KEY}']
     vis_params_001 = st.session_state[f'lst_vis_params_{PAGE_KEY}']
 
@@ -160,7 +163,8 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is not None and st.session_state[f'
     vis_params_002 = st.session_state[f'classified_vis_params_{PAGE_KEY}']
     legend_dict = st.session_state[f'classified_legend_dict_{PAGE_KEY}']
 
-    left_layer = geemap.ee_tile_layer(lst, vis_params_001, 'hot island in Kaohsiung')
+    # FIX: Pass lst_2024 to geemap.ee_tile_layer instead of lst
+    left_layer = geemap.ee_tile_layer(lst_2024, vis_params_001, 'hot island in Kaohsiung')
     right_layer = geemap.ee_tile_layer(result002, vis_params_002, 'wekaXMeans classified land cover')
     Map.split_map(left_layer, right_layer)
 
