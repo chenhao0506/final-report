@@ -30,22 +30,22 @@ st.title("10年間高雄地區綜整分析比較 - Session State版")
 st.markdown("時間範圍：2014 年 7 月與 2024 年 7 月")
 
     # 地表溫度比較圖
-    st.subheader("地表溫度比較圖")
-    Map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
-    Map1.split_map(
-        geemap.ee_tile_layer(lst_2014, vis_params_temp, "2014 LST"),
-        geemap.ee_tile_layer(lst_2024, vis_params_temp, "2024 LST")
+st.subheader("地表溫度比較圖")
+Map1 = geemap.Map(center=[22.9, 120.6], zoom=9)
+Map1.split_map(
+    geemap.ee_tile_layer(lst_2014, vis_params_temp, "2014 LST"),
+    geemap.ee_tile_layer(lst_2024, vis_params_temp, "2024 LST")
     )
-    Map1.to_streamlit(width=800, height=600)
+Map1.to_streamlit(width=800, height=600)
 
     # 土地分類比較圖
-    st.subheader("土地利用分類比較圖")
-    Map2 = geemap.Map(center=[22.9, 120.6], zoom=9)
-    Map2.split_map(
-        geemap.ee_tile_layer(class_2014, vis_params_class, "2014 Land Cover"),
-        geemap.ee_tile_layer(class_2024, vis_params_class, "2024 Land Cover")
+st.subheader("土地利用分類比較圖")
+Map2 = geemap.Map(center=[22.9, 120.6], zoom=9)
+Map2.split_map(
+    geemap.ee_tile_layer(class_2014, vis_params_class, "2014 Land Cover"),
+    geemap.ee_tile_layer(class_2024, vis_params_class, "2024 Land Cover")
     )
-    Map2.to_streamlit(width=800, height=600)
+Map2.to_streamlit(width=800, height=600)
 
 
 end_time = time.time()
