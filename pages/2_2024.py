@@ -16,7 +16,7 @@ if not ee.data._initialized:
     ee.Initialize(credentials)
 
 # --- 初始化 Session State 和 GEE 資料處理 ---
-# 使用第三個程式碼預期的鍵名來初始化和儲存資料
+# 使用第四個程式碼預期的鍵名來初始化和儲存資料
 if 'lst_2024_image' not in st.session_state or st.session_state.lst_2024_image is None:
     st.session_state.lst_2024_image = None # 初始化為 None
 if 'class_2024_image' not in st.session_state or st.session_state.class_2024_image is None:
@@ -107,7 +107,7 @@ calculated_lst = thermal.expression(
         }
     ).rename('LST')
 
-# 將 LST 儲存到 session_state，使用第三個程式碼預期的鍵名
+# 將 LST 儲存到 session_state，使用第四個程式碼預期的鍵名
 st.session_state.lst_2024_image = calculated_lst # Changed key
 
 # 非監督式土地利用分析
@@ -124,7 +124,7 @@ training001 = classified_bands.sample(
 clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
 calculated_result002 = classified_bands.cluster(clusterer_XMeans)
 
-# 將分類影像儲存到 session_state，使用第三個程式碼預期的鍵名
+# 將分類影像儲存到 session_state，使用第四個程式碼預期的鍵名
 st.session_state.class_2024_image = calculated_result002 
 
 # --- Streamlit 介面與地圖顯示 ---
