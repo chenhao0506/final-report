@@ -153,7 +153,7 @@ if st.session_state[f'lst_image_{PAGE_KEY}'] is not None and st.session_state[f'
     Map = geemap.Map(center=[22.9, 120.6], zoom=9)
 
     # 從 session_state 取出影像和可視化參數
-    lst = st.session_state[f'lst_image_{PAGE_KEY}']
+    lst_2024 = st.session_state[f'lst_image_{PAGE_KEY}']
     vis_params_001 = st.session_state[f'lst_vis_params_{PAGE_KEY}']
 
     result002 = st.session_state[f'classified_image_{PAGE_KEY}']
