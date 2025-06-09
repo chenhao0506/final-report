@@ -48,10 +48,6 @@ if 'vis_params_class' not in st.session_state:
     }
 
 
-# 僅在資料尚未載入時執行 GEE 計算
-if st.session_state.lst_2014_image is None:
-    st.info("正在載入 2014 年影像資料，請稍候...")
-
     # 設定 AOI 與時間範圍
     aoi = ee.Geometry.Rectangle([120.075769, 22.484333, 121.021313, 23.285458])
     startDate = '2014-07-01'
@@ -132,8 +128,6 @@ if st.session_state.lst_2014_image is None:
 
     # 將分類影像儲存到 session_state，使用第三個程式碼預期的鍵名
     st.session_state.class_2014_image = calculated_result002
-
-    st.success("2014 年影像資料載入完成！")
 
 
 # --- Streamlit 介面與地圖顯示 ---
