@@ -18,11 +18,11 @@ if not ee.data._initialized:
 # --- 初始化 Session State 和 GEE 資料處理 ---
 # 使用第三個程式碼預期的鍵名來初始化和儲存資料
 if 'lst_2024_image' not in st.session_state or st.session_state.lst_2024_image is None:
-    st.session_state.lst_2024_image = None # 初始化為 None
+    st.session_state.lst_2024_image = None 
 if 'class_2024_image' not in st.session_state or st.session_state.class_2024_image is None:
-    st.session_state.class_2024_image = None # 初始化為 None
+    st.session_state.class_2024_image = None 
 
-# 初始化通用的視覺化參數，如果它們尚未被設定 (確保與 2014 頁面一致)
+# 初始化通用視覺化參數
 if 'vis_params_temp' not in st.session_state:
     st.session_state.vis_params_temp = {
         'min': 10,
@@ -107,8 +107,8 @@ if 'vis_params_class' not in st.session_state:
         }
     ).rename('LST')
 
-    # 將 LST 儲存到 session_state，使用第三個程式碼預期的鍵名
-    st.session_state.lst_2024_image = calculated_lst # Changed key
+    # 將 LST 儲存到 session_state
+    st.session_state.lst_2024_image = calculated_lst
 
     # 非監督式土地利用分析
     classified_bands = image.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7'])
@@ -124,8 +124,8 @@ if 'vis_params_class' not in st.session_state:
     clusterer_XMeans = ee.Clusterer.wekaXMeans().train(training001)
     calculated_result002 = classified_bands.cluster(clusterer_XMeans)
 
-    # 將分類影像儲存到 session_state，使用第三個程式碼預期的鍵名
-    st.session_state.class_2024_image = calculated_result002 # Changed key
+    # 將分類影像儲存到 session_state
+    st.session_state.class_2024_image = calculated_result002
 
 # --- Streamlit 介面與地圖顯示 ---
 st.title("高雄地區地表溫度分析與土地利用分析")
